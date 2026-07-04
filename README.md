@@ -54,6 +54,111 @@ python scripts/fetch_sec_filings.py --start 2023-01-01
 python scripts/fetch_fomc_statements.py --start 2023-01-01
 ```
 
+## Feature Table
+
+Join the processed sources into a single daily modeling table aligned to QQQ trading days:
+
+```bash
+python scripts/build_daily_feature_table.py
+```
+
+This writes `data/processed/daily_feature_table.csv`.
+
+## Chronos-2 Fine-Tuning
+
+Install the project dependencies, build the feature table, then start with LoRA fine-tuning:
+
+```bash
+pip install -r requirements.txt
+python scripts/build_daily_feature_table.py
+python scripts/fine_tune_chronos2.py \
+  --prediction-length 5 \
+  --context-length 512 \
+  --num-steps 200 \
+  --batch-size 64 \
+  --finetune-mode lora
+```
+
+The script loads `amazon/chronos-2`, uses `log_return_1d` as the default target, keeps covariates as past-only features, and saves the fine-tuned checkpoint under `models/chronos2-qqq/finetuned-ckpt`.
+
+### Local Smoke Test
+
+On a local Apple Silicon machine, first validate the data split and selected features without loading the model:
+
+```bash
+python scripts/fine_tune_chronos2.py --smoke-test --prepare-only
+```
+
+Then run a tiny LoRA fine-tuning job:
+
+```bash
+python scripts/fine_tune_chronos2.py --smoke-test --device-map auto
+```
+
+Smoke-test mode uses the most recent 384 rows, a 3-day prediction horizon, 64 rows of context, 5 training steps, batch size 8, and a smaller covariate set. If `auto` fails on MPS, retry with `--device-map cpu`; it is slower but usually more predictable.
+
+### Chronos-2 Prediction Test
+
+After fine-tuning, generate a 3-step forecast from the smoke checkpoint:
+
+```bash
+python scripts/predict_chronos2.py \
+  --checkpoint models/chronos2-qqq-smoke/finetuned-ckpt \
+  --device-map auto
+```
+
+This writes `data/processed/chronos2_smoke_forecast.csv` with forecast dates, the median prediction, and quantile columns such as `q0.1`, `q0.5`, and `q0.9`.
+
+To test the checkpoint against known data, hold back the last 3 rows and compare predictions to actual values:
+
+```bash
+python scripts/predict_chronos2.py \
+  --checkpoint models/chronos2-qqq-smoke/finetuned-ckpt \
+  --holdout-rows 3 \
+  --device-map auto \
+  --output data/processed/chronos2_smoke_holdout_forecast.csv
+```
+
+The holdout output adds `actual`, `error`, and `abs_error` columns.
+
+### Base vs Fine-Tuned Validation
+
+To compare the pretrained Chronos-2 model against a fine-tuned version on the same validation split, first run a dry check:
+
+```bash
+python scripts/compare_chronos2_validation.py --smoke-test --prepare-only
+```
+
+Then run the smoke comparison:
+
+```bash
+python scripts/compare_chronos2_validation.py --smoke-test --device-map auto
+```
+
+This workflow:
+
+- reserves the final validation rows chronologically,
+- evaluates `amazon/chronos-2` as-is on rolling validation windows,
+- fine-tunes Chronos-2 on the train split only,
+- evaluates the fine-tuned model on the exact same validation windows,
+- writes `models/chronos2-validation-comparison/validation_predictions.csv`,
+- writes `models/chronos2-validation-comparison/validation_metrics.csv`.
+
+The main comparison metrics are `mae_log_return`, `rmse_log_return`, `bias_log_return`, `directional_accuracy`, and `q10_q90_coverage`. Lower MAE/RMSE is better; higher directional accuracy and interval coverage are better.
+
+Summarize the comparison into a compact report:
+
+```bash
+python scripts/summarize_chronos2_comparison.py
+```
+
+This reads the comparison outputs and writes:
+
+- `models/chronos2-validation-comparison/summary_report.md`
+- `models/chronos2-validation-comparison/summary_deltas.csv`
+
+The summary report includes an overall verdict, per-horizon metric deltas, and the validation dates where fine-tuning helped or hurt the most.
+
 ## Output Data Structure
 
 The processed output files are saved in `data/processed/` and share a common `date` column (in `YYYY-MM-DD` format) so they can easily be joined together.
