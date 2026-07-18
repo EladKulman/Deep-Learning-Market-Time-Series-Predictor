@@ -1,163 +1,161 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import logging
+import time
 from pathlib import Path
+
 import pandas as pd
 import requests
-import json
-import time
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 GDELT_API_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
+GDELT_MIN_DATE = "2017-01-01"
+PACING_SLEEP = 240        # seconds between successful requests (your IP is throttled hard)
+RATE_LIMIT_WAITS = [120, 240, 300, 300, 600, 600]  # backoff on 429 / bad responses
 
 TOPICS = {
     "ai": '("artificial intelligence" OR "generative AI" OR "machine learning" OR OpenAI OR Nvidia)',
     "semiconductor": '(semiconductor OR chipmaker OR Nvidia OR AMD OR TSMC OR ASML OR Intel)',
-    "fed": '("Federal Reserve" OR Fed OR FOMC OR "interest rates" OR "rate hike" OR "rate cut")',
+    "fed": '("Federal Reserve" OR FOMC OR "interest rates" OR "rate hike" OR "rate cut")',
     "inflation": '(inflation OR CPI OR "consumer prices" OR "core inflation")',
-    "big_tech_earnings": '(Apple OR Microsoft OR Amazon OR Google OR Alphabet OR Meta OR Nvidia) AND (earnings OR revenue OR guidance OR profit)',
-    "recession": '(recession OR "hard landing" OR slowdown OR "economic contraction")'
+    "big_tech_earnings": '(Apple OR Microsoft OR Amazon OR Alphabet OR Meta OR Nvidia) (earnings OR revenue OR guidance)',
+    "recession": '(recession OR "hard landing" OR "economic contraction")',
 }
 
-def fetch_gdelt_day(topic_name, query, date_str):
-    """
-    date_str format: YYYY-MM-DD
-    GDELT requires StartDateTime and EndDateTime in YYYYMMDDHHMMSS.
-    """
-    start_dt = date_str.replace("-", "") + "000000"
-    end_dt = date_str.replace("-", "") + "235959"
-    
-    # Enforce English
-    full_query = f"{query} sourcelang:eng"
-    
-    params = {
-        "query": full_query,
-        "mode": "artlist",
-        "format": "json",
-        "startdatetime": start_dt,
-        "enddatetime": end_dt,
-        "maxrecords": 1
-    }
-    
-    try:
-        response = requests.get(GDELT_API_URL, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        articles = data.get("articles", [])
-        return articles
-    except requests.exceptions.JSONDecodeError:
-        # GDELT sometimes returns empty body instead of valid JSON if no results
-        return []
-    except Exception as e:
-        logging.error(f"Failed fetching {topic_name} on {date_str}: {e}")
-        return []
+SESSION = requests.Session()
+SESSION.headers.update({"User-Agent": "qqq-research-pipeline (academic project)"})
 
-def main():
-    parser = argparse.ArgumentParser(description="Fetch and process GDELT news")
-    parser.add_argument("--start", type=str, default="2023-01-01", help="Start date (YYYY-MM-DD)")
-    parser.add_argument("--end", type=str, default="2023-01-31", help="End date (YYYY-MM-DD)")
-    parser.add_argument("--out-dir", type=str, default="data", help="Base output directory")
+
+def valid_date(value: str) -> str:
+    try:
+        ts = pd.Timestamp(value)
+    except (ValueError, TypeError):
+        raise argparse.ArgumentTypeError(
+            f"Invalid date '{value}'. Use full YYYY-MM-DD, e.g. 2026-07-01."
+        )
+    if len(value.strip()) < 10:
+        raise argparse.ArgumentTypeError(
+            f"Ambiguous date '{value}'. Use full YYYY-MM-DD, e.g. 2026-07-01."
+        )
+    return ts.strftime("%Y-%m-%d")
+
+
+def fetch_timeline(query: str, mode: str, start: str, end: str) -> pd.DataFrame:
+    """One request for the full range. Returns DataFrame indexed by date.
+
+    Columns: 'value' (count or tone) and, for timelinevolraw, 'norm'
+    (total articles GDELT monitored that day, useful for normalization).
+    """
+    params = {
+        "query": f"{query} sourcelang:eng",
+        "mode": mode,
+        "format": "json",
+        "timelinesmooth": 0,
+        "startdatetime": start.replace("-", "") + "000000",
+        "enddatetime": end.replace("-", "") + "235959",
+    }
+    for attempt, wait in enumerate([0] + RATE_LIMIT_WAITS):
+        if wait:
+            logging.warning("Backing off %ds before retry %d...", wait, attempt)
+            time.sleep(wait)
+        try:
+            resp = SESSION.get(GDELT_API_URL, params=params, timeout=120)
+            if resp.status_code == 429:
+                logging.warning("429 Too Many Requests (%s)", mode)
+                continue
+            resp.raise_for_status()
+            data = resp.json()
+            break
+        except json.JSONDecodeError:
+            logging.warning("Non-JSON response (likely soft rate limit).")
+            continue
+        except requests.RequestException as exc:
+            logging.warning("Request error: %s", exc)
+            continue
+    else:
+        raise RuntimeError(f"GDELT request failed after all retries: mode={mode}")
+
+    timeline = data.get("timeline", [])
+    if not timeline:
+        return pd.DataFrame(columns=["value"])
+
+    rows = {}
+    for point in timeline[0].get("data", []):
+        digits = "".join(ch for ch in point.get("date", "") if ch.isdigit())[:8]
+        if len(digits) < 8:
+            continue
+        date = f"{digits[:4]}-{digits[4:6]}-{digits[6:8]}"
+        entry = rows.setdefault(date, {"value": 0.0, "norm": 0.0, "n": 0})
+        entry["value"] += float(point.get("value") or 0)
+        entry["norm"] += float(point.get("norm") or 0)
+        entry["n"] += 1
+
+    frame = pd.DataFrame.from_dict(rows, orient="index")
+    frame.index.name = "date"
+    if mode == "timelinetone" and not frame.empty:
+        frame["value"] = frame["value"] / frame["n"]  # average if multiple points per day
+    return frame.sort_index()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Fetch GDELT daily volume+tone per topic")
+    parser.add_argument("--start", type=valid_date, default="2017-01-01")
+    parser.add_argument("--end", type=valid_date, default=pd.Timestamp.today().strftime("%Y-%m-%d"))
+    parser.add_argument("--out-dir", default="data")
     args = parser.parse_args()
 
-    out_dir = Path(args.out_dir)
-    raw_dir = out_dir / "raw" / "gdelt"
-    proc_dir = out_dir / "processed"
-    raw_dir.mkdir(parents=True, exist_ok=True)
+    if args.start < GDELT_MIN_DATE:
+        logging.warning("GDELT DOC API starts %s; clamping start date.", GDELT_MIN_DATE)
+        args.start = GDELT_MIN_DATE
+    if args.end < args.start:
+        raise SystemExit("--end must be on or after --start")
+
+    proc_dir = Path(args.out_dir) / "processed"
+    cache_dir = Path(args.out_dir) / "raw" / "gdelt_timeline"
     proc_dir.mkdir(parents=True, exist_ok=True)
-    
-    date_range = pd.date_range(start=args.start, end=args.end, freq='D')
-    
-    all_articles = []
-    
-    for topic_name, query in TOPICS.items():
-        logging.info(f"--- Fetching Topic: {topic_name} ---")
-        topic_articles = []
-        
-        for dt in date_range:
-            date_str = dt.strftime("%Y-%m-%d")
-            articles = fetch_gdelt_day(topic_name, query, date_str)
-            
-            for art in articles:
-                art["topic"] = topic_name
-                # Extract simple YYYY-MM-DD date
-                seendate = art.get("seendate", "")
-                if len(seendate) >= 8:
-                    art["date"] = f"{seendate[:4]}-{seendate[4:6]}-{seendate[6:8]}"
-                else:
-                    art["date"] = date_str
-                    
-            topic_articles.extend(articles)
-            time.sleep(1) # Rate limit politely
-            
-        if topic_articles:
-            # Save raw jsonl
-            raw_path = raw_dir / f"gdelt_articles_{topic_name}.jsonl"
-            with open(raw_path, 'w', encoding='utf-8') as f:
-                for art in topic_articles:
-                    f.write(json.dumps(art) + "\n")
-            
-            all_articles.extend(topic_articles)
-            logging.info(f"Saved {len(topic_articles)} raw articles for {topic_name}")
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    full_idx = pd.date_range(args.start, args.end, freq="D").strftime("%Y-%m-%d")
+    out = pd.DataFrame(index=pd.Index(full_idx, name="date"))
+
+    n_topics = len(TOPICS)
+    for i, (topic, query) in enumerate(TOPICS.items(), 1):
+        cache_path = cache_dir / f"{topic}.csv"
+        if cache_path.exists():
+            logging.info("[%d/%d] %s: cached (%s) - delete to refetch", i, n_topics, topic, cache_path)
+            cached = pd.read_csv(cache_path, dtype={"date": str}).set_index("date")
         else:
-            logging.warning(f"No articles found for {topic_name}")
-            
-    # Process
-    if not all_articles:
-        logging.error("No articles fetched for any topic. Exiting.")
-        return
-        
-    df = pd.DataFrame(all_articles)
-    
-    # Required raw columns: topic, date, title, url, domain, language, source_country, seendate, tone_if_available
-    df = df.rename(columns={"sourcecountry": "source_country"})
-    if "tone" not in df.columns:
-        df["tone_if_available"] = float('nan')
-    else:
-        df["tone_if_available"] = df["tone"]
-        
-    cols = ['topic', 'date', 'title', 'url', 'domain', 'language', 'source_country', 'seendate', 'tone_if_available']
-    # Keep only available cols
-    cols = [c for c in cols if c in df.columns]
-    df = df[cols]
-    
-    # Remove duplicates
-    df = df.drop_duplicates(subset=['url'])
-    
-    # Aggregate to daily features
-    # Required: date, <topic>_news_count, <topic>_avg_tone
-    aggs = {}
-    for topic_name in TOPICS.keys():
-        topic_df = df[df['topic'] == topic_name]
-        counts = topic_df.groupby('date').size().rename(f'{topic_name}_news_count')
-        aggs[f'{topic_name}_news_count'] = counts
-        aggs[f'{topic_name}_avg_tone'] = pd.Series(float('nan'), index=counts.index, name=f'{topic_name}_avg_tone')
-        
-    agg_df = pd.DataFrame(aggs)
-    agg_df.index.name = 'date'
-    agg_df = agg_df.reset_index()
-    
-    # Ensure all days in range exist
-    full_idx = pd.date_range(start=args.start, end=args.end, freq='D').strftime('%Y-%m-%d')
-    agg_df = agg_df.set_index('date').reindex(full_idx).fillna(0).reset_index()
-    agg_df = agg_df.rename(columns={'index': 'date'})
-    
-    # For _avg_tone columns, set missing to NaN instead of 0
-    for c in agg_df.columns:
-        if c.endswith('_avg_tone'):
-            agg_df[c] = agg_df[c].replace(0, float('nan'))
-            
-    proc_path = proc_dir / "gdelt_topic_daily.csv"
-    agg_df.to_csv(proc_path, index=False)
-    
-    logging.info("--- SUMMARY: GDELT ---")
-    logging.info(f"Days processed: {len(agg_df)}")
-    logging.info(f"Total Unique Articles: {len(df)}")
-    for topic_name in TOPICS.keys():
-        cnt = agg_df[f'{topic_name}_news_count'].sum()
-        logging.info(f"  {topic_name}: {int(cnt)} articles")
-    logging.info(f"Processed Output: {proc_path}")
-    logging.info("----------------------\n")
+            logging.info("[%d/%d] Topic: %s (2 requests, %ds apart)", i, n_topics, topic, PACING_SLEEP)
+            counts = fetch_timeline(query, "timelinevolraw", args.start, args.end)
+            logging.info("    volume: %d days", len(counts))
+            time.sleep(PACING_SLEEP)
+            tone = fetch_timeline(query, "timelinetone", args.start, args.end)
+            logging.info("    tone:   %d days", len(tone))
+            time.sleep(PACING_SLEEP)
+
+            cached = pd.DataFrame({
+                "count": counts.get("value"),
+                "norm": counts.get("norm"),
+                "tone": tone.get("value"),
+            })
+            cached.index.name = "date"
+            cached.to_csv(cache_path)
+            logging.info("    cached -> %s", cache_path)
+
+        out[f"{topic}_news_count"] = cached["count"].reindex(full_idx)
+        out[f"{topic}_avg_tone"] = cached["tone"].reindex(full_idx)
+
+    count_cols = [c for c in out.columns if c.endswith("_news_count")]
+    out[count_cols] = out[count_cols].fillna(0)
+    # Tone stays NaN where no articles matched that day.
+
+    out = out.reset_index()
+    path = proc_dir / "gdelt_topic_daily.csv"
+    out.to_csv(path, index=False)
+    logging.info("Wrote %s (%d rows, %d columns)", path, len(out), len(out.columns))
+
 
 if __name__ == "__main__":
     main()
