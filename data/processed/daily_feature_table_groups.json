@@ -139,6 +139,14 @@
     "group": "rates",
     "role": "past"
   },
+  "d_dfii10_bp": {
+    "group": "rates",
+    "role": "past"
+  },
+  "d_t5yie_bp": {
+    "group": "rates",
+    "role": "past"
+  },
   "t10y2y_lag1": {
     "group": "rates",
     "role": "past"
@@ -219,6 +227,10 @@
     "group": "fed",
     "role": "past"
   },
+  "ndx_earnings_count": {
+    "group": "calendar",
+    "role": "known_future"
+  },
   "sec_8k_count": {
     "group": "sec",
     "role": "past"
@@ -240,6 +252,14 @@
     "role": "known_future"
   },
   "fomc_cycle_week": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "is_cpi_day": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "is_nfp_day": {
     "group": "calendar",
     "role": "known_future"
   },

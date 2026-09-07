@@ -125,16 +125,28 @@ def build(start: str, end: str, fomc_file: Path) -> pd.DataFrame:
     table["is_fomc_day_before"] = (table["days_to_fomc"] == 1).astype(int)
     table["fomc_cycle_week"] = (table["days_since_fomc"] // 7).clip(upper=5)
 
-    # --- BLS releases via FRED (optional) ---
+    # --- BLS releases ---
+    # CPI days come from the ALFRED vintage file when it exists: FRED's release calendar
+    # (release 10) also lists the February seasonal-factor revision, which is not the
+    # monthly print markets trade on. Payroll days come from FRED release 50.
     load_dotenv()
     api_key = os.environ.get("FRED_API_KEY", "")
+    fred_file = fomc_file.with_name("fred_macro_daily.csv")
+    if fred_file.exists() and "cpi_release_day" in pd.read_csv(fred_file, nrows=1).columns:
+        fred = pd.read_csv(fred_file, parse_dates=["date"])
+        cpi_days = set(fred.loc[fred["cpi_release_day"] == 1, "date"])
+        table["is_cpi_day"] = table["date"].isin(cpi_days).astype(int)
+        logging.info("is_cpi_day: %d release days (from ALFRED vintages)", int(table["is_cpi_day"].sum()))
+    elif api_key and not api_key.startswith("your_"):
+        dates = fred_release_dates(FRED_RELEASES["is_cpi_day"], api_key, start)
+        table["is_cpi_day"] = table["date"].isin(dates).astype(int)
+        logging.info("is_cpi_day: %d release days (from FRED release calendar)", int(table["is_cpi_day"].sum()))
     if api_key and not api_key.startswith("your_"):
-        for column, release_id in FRED_RELEASES.items():
-            dates = fred_release_dates(release_id, api_key, start)
-            table[column] = table["date"].isin(dates).astype(int)
-            logging.info("%s: %d release days", column, int(table[column].sum()))
+        dates = fred_release_dates(FRED_RELEASES["is_nfp_day"], api_key, start)
+        table["is_nfp_day"] = table["date"].isin(dates).astype(int)
+        logging.info("is_nfp_day: %d release days", int(table["is_nfp_day"].sum()))
     else:
-        logging.warning("FRED_API_KEY not set: skipping is_cpi_day / is_nfp_day")
+        logging.warning("FRED_API_KEY not set: skipping is_nfp_day")
 
     # --- month / quarter structure ---
     month_key = table["date"].dt.to_period("M")

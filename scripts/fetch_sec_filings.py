@@ -33,6 +33,9 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 TICKERS = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "AMD", "INTC", "TSM", "AVGO"]
+# Companies whose earlier filings live under a predecessor registrant:
+# Alphabet Inc. (2015-) succeeded Google Inc.; Broadcom Inc. (2018-) succeeded Broadcom Ltd / Avago.
+PREDECESSOR_CIKS = {"GOOGL": ["0001288776"], "AVGO": ["0001441634"]}
 FORM_COLUMNS = {
     "10-K": "sec_10k_count",
     "10-Q": "sec_10q_count",
@@ -100,11 +103,12 @@ def process_filings(frame: pd.DataFrame, ticker: str, start: str, end: str | Non
     frame["is_earnings"] = (frame["form"] == "8-K") & items.str.split(",").apply(
         lambda parts: EARNINGS_ITEM in [p.strip() for p in parts]
     )
+    # Anything accepted before the 16:00 ET close (pre-market or intraday) can affect day T;
+    # acceptance at or after the close affects the next session. Missing timestamps are
+    # treated as before the close, the conservative choice for a same-day flag.
     accepted = pd.to_datetime(frame.get("acceptanceDateTime"), errors="coerce")
     minutes = accepted.dt.hour * 60 + accepted.dt.minute
-    frame["session"] = "unknown"
-    frame.loc[minutes < 9 * 60 + 30, "session"] = "pre"
-    frame.loc[(minutes >= 9 * 60 + 30) & (minutes < 16 * 60), "session"] = "intraday"
+    frame["session"] = "pre"
     frame.loc[minutes >= 16 * 60, "session"] = "post"
     return frame[["date", "ticker", "form", "is_earnings", "session", "accessionNumber"]]
 
@@ -128,7 +132,8 @@ def build_daily(filings: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
         daily[f"ndx_earnings_{session}market"] = daily["date"].map(subset.groupby("date").size()).fillna(0).astype(int)
     for ticker in TICKERS:
         dates = set(earnings.loc[earnings["ticker"] == ticker, "date"])
-        daily[f"{ticker.lower()}_earnings_event"] = daily["date"].isin(dates).astype(int)
+        if dates:  # foreign issuers (TSMC) report via 6-K, so they have no Item 2.02 flag
+            daily[f"{ticker.lower()}_earnings_event"] = daily["date"].isin(dates).astype(int)
     return daily
 
 
@@ -154,7 +159,12 @@ def main() -> None:
             logging.warning("No CIK for %s", ticker)
             continue
         logging.info("Fetching %s (CIK %s)", ticker, cik)
-        filings = process_filings(fetch_all_filings(cik, headers, raw_dir, ticker), ticker, args.start, args.end)
+        parts = [fetch_all_filings(cik, headers, raw_dir, ticker)]
+        for old_cik in PREDECESSOR_CIKS.get(ticker, []):
+            logging.info("  %s: predecessor CIK %s", ticker, old_cik)
+            parts.append(fetch_all_filings(old_cik, headers, raw_dir, f"{ticker}_pred{old_cik}"))
+        filings = process_filings(pd.concat(parts, ignore_index=True), ticker, args.start, args.end)
+        filings = filings.drop_duplicates(subset=["accessionNumber"])
         if filings.empty:
             logging.warning("No target filings for %s", ticker)
             continue

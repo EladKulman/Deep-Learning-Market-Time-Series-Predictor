@@ -45,8 +45,8 @@ INPUTS = {
 }
 OPTIONAL = {"vol", "cross", "epu", "gdelt", "tone", "sec", "calendar"}
 
-# FRED columns posted the day after their reference date (H.15 and ICE BofA).
-FRED_LAG_ONE_DAY = ["dff", "dgs10", "dgs2", "t10y2y", "hy_oas"]
+# FRED columns posted the day after their reference date (H.15).
+FRED_LAG_ONE_DAY = ["dff", "dgs10", "dgs2", "t10y2y"]
 FRED_SAME_DAY = ["dfii10", "t5yie", "cpi", "cpi_yoy"]
 GDELT_TOPICS = ["ai", "semiconductor", "fed", "inflation", "big_tech_earnings", "recession"]
 
@@ -166,7 +166,7 @@ def build(input_dir: Path, profile: str) -> tuple[pd.DataFrame, dict]:
             table[f"d_{column}_bp"] = table[column].diff() * 100
             groups[f"d_{column}_bp"] = {"group": "rates", "role": "past"}
             table = table.drop(columns=[column])
-    keep_levels = {"t10y2y_lag1": "rates", "hy_oas_lag1": "rates", "cpi_yoy": "rates"}
+    keep_levels = {"t10y2y_lag1": "rates", "cpi_yoy": "rates"}
     for column, group in keep_levels.items():
         if column in table.columns:
             groups[column] = {"group": group, "role": "past"}

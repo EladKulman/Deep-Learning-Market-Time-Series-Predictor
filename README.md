@@ -176,12 +176,11 @@ This file contains the core market data for the Nasdaq-100 ETF, aligned to US tr
   - `volume_change_1d`: The percentage change in trading volume from the previous day.
 
 ### B. FRED Macro Indicators (`data/processed/fred_macro_daily.csv`) 🟢 Success
-Calendar-day file of FRED series stored on their reference dates; the feature table applies the publication lags (H.15 rates and the HY spread post the next day, breakevens the same afternoon).
+Calendar-day file of FRED series stored on their reference dates; the feature table applies the publication lags (H.15 rates post the next day, breakevens the same afternoon). The ICE BofA high-yield spread is not included because FRED now serves only its last three years; the HYG return in `cross_asset_daily.csv` is the credit signal.
 - **Base columns**: `date`
 - **Features**:
   - `dff`, `dgs10`, `dgs2`, `t10y2y`: fed funds, 10y, 2y, and the 10y-2y spread (H.15).
   - `dfii10`, `t5yie`: 10-year real yield and 5-year breakeven inflation (Treasury-sourced, same day).
-  - `hy_oas`: ICE BofA US High Yield option-adjusted spread.
   - `cpi`, `cpi_yoy`, `cpi_ref_month`: the CPI level and year-over-year change **as published on or before each day** (ALFRED vintages), not forward-filled by reference month.
   - `cpi_release_day`: 1 on BLS CPI publication days.
   - `vix_fred`: kept for compatibility; the builder uses the CBOE close.
@@ -206,7 +205,8 @@ This file tracks major corporate filing events (10-K, 10-Q, 8-K) for the top Nas
   - `sec_total_filings`: Sum of the above.
   - `{ticker}_filing_event`: 1 if that company filed one of the tracked forms that day.
   - `ndx_earnings_count`, `ndx_earnings_premarket`, `ndx_earnings_postmarket`: 8-K filings with Item 2.02 (earnings release), split by EDGAR acceptance time; `{ticker}_earnings_event` per company. Post-market releases are attached to the next trading day by the builder.
-  - History is complete from 2006 (the paginated older submission files are fetched, not only the most recent thousand filings).
+  - History is complete from 2006 (the paginated older submission files are fetched, not only the most recent thousand filings). Alphabet's filings before its 2015 holding-company reorganization come from the Google Inc registrant, and Broadcom's before 2018 from Broadcom Ltd / Avago.
+  - TSMC reports earnings via 6-K rather than 8-K Item 2.02, so it has no `tsm_earnings_event` column.
 
 ### F. FOMC Statements (`data/processed/fomc_events_daily.csv`) 🟢 Success
 This file parses Federal Reserve monetary policy statements.

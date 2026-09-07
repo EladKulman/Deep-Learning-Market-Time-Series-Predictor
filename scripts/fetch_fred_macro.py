@@ -11,7 +11,9 @@ What changed versus the first version
 * Daily rate series are stored as observed. The feature-table builder lags the H.15 series
   (DFF, DGS2, DGS10, T10Y2Y) and the ICE BofA spread by one day because FRED posts them the
   following day; the Treasury-sourced breakeven and real-yield series are same-day.
-* Added: DFII10 (10y real yield), T5YIE (5y breakeven), BAMLH0A0HYM2 (high-yield OAS).
+* Added: DFII10 (10y real yield), T5YIE (5y breakeven). The ICE BofA high-yield spread
+  (BAMLH0A0HYM2) was dropped: since April 2026 FRED serves only its last three years, so
+  the HYG ETF return in cross_asset_daily.csv (from 2007) is the credit signal instead.
 
 Requires FRED_API_KEY in .env (free: https://fred.stlouisfed.org/docs/api/api_key.html).
 Output: data/processed/fred_macro_daily.csv, one row per calendar day.
@@ -37,7 +39,6 @@ DAILY_SERIES = {
     "T10Y2Y": "t10y2y",
     "DFII10": "dfii10",
     "T5YIE": "t5yie",
-    "BAMLH0A0HYM2": "hy_oas",
     "VIXCLS": "vix_fred",
 }
 CPI_SERIES = "CPIAUCSL"

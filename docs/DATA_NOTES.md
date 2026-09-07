@@ -24,7 +24,6 @@ Read this before adding or changing a processed CSV.
 |---|---|---|
 | QQQ, cross-asset ETFs, CBOE indices | at the close | none |
 | FRED H.15 rates (DFF, DGS2, DGS10, T10Y2Y) | next day 16:15 ET | shift +1 day |
-| FRED HY OAS (BAMLH0A0HYM2) | next morning | shift +1 day |
 | FRED breakevens / real yields (T5YIE, DFII10) | same afternoon | none |
 | CPI (ALFRED vintage) | release day 08:30 ET | already vintage-aligned |
 | EPU / EMU (calendar days) | next morning | use value dated T-1; weekend values roll into Monday |
