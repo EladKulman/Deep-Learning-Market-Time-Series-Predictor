@@ -144,12 +144,16 @@ def main() -> None:
             cached.to_csv(cache_path)
             logging.info("    cached -> %s", cache_path)
 
-        out[f"{topic}_news_count"] = cached["count"].reindex(full_idx)
-        out[f"{topic}_avg_tone"] = cached["tone"].reindex(full_idx)
-
-    count_cols = [c for c in out.columns if c.endswith("_news_count")]
-    out[count_cols] = out[count_cols].fillna(0)
-    # Tone stays NaN where no articles matched that day.
+        cached = cached.reindex(full_idx)
+        # Days GDELT did not cover (API outages, the partial final day) have no
+        # 'norm' (total monitored articles). Leave them NaN: Chronos-2 masks
+        # missing values, and a zero would be a fake "no news" observation.
+        covered = cached["norm"].fillna(0) > 0
+        out[f"{topic}_news_count"] = cached["count"].where(covered)
+        out[f"{topic}_avg_tone"] = cached["tone"].where(covered)
+        # Share of all GDELT-monitored articles that day, which removes the
+        # long-run growth in GDELT's source coverage from the raw counts.
+        out[f"{topic}_news_share"] = (cached["count"] / cached["norm"]).where(covered)
 
     out = out.reset_index()
     path = proc_dir / "gdelt_topic_daily.csv"

@@ -20,49 +20,51 @@ This project builds a data ingestion layer to forecast short-term Nasdaq-100 / Q
    cp .env.example .env
    ```
 
-## Ingestion Scripts
+## Ingestion Pipeline
 
-### Market Prices
+Run the fetchers in this order (each writes one file to `data/processed/`), then build the
+table. Every step is idempotent and re-downloads from the source; `docs/DATA_NOTES.md`
+explains the availability lags and the no-zero-fill rule that all files follow.
+
 ```bash
-python scripts/fetch_qqq_prices.py --start 2006-01-01
+# 1. Prices and market indices (no keys needed)
+python scripts/fetch_qqq_prices.py --start 2006-01-01          # qqq_ohlcv_daily.csv
+python scripts/fetch_cross_asset_prices.py                     # cross_asset_daily.csv  (TLT, HYG, SPY, IWM, SMH, GLD, oil, DXY)
+python scripts/fetch_cboe_vol_indices.py                       # cboe_vol_daily.csv     (VIX, VXN, VIX3M, VIX9D, VVIX + term-structure ratios)
+
+# 2. Uncertainty and news (no keys needed)
+python scripts/fetch_epu.py                                    # epu_daily.csv          (daily EPU and Equity Market Uncertainty, 1985+)
+python scripts/fetch_gdelt_news.py --start 2017-01-01          # gdelt_topic_daily.csv  (cached per topic; delete data/raw/gdelt_timeline/*.csv to refetch)
+
+# 3. Fed communication (no keys needed; the tone model downloads ~1.4 GB once)
+python scripts/fetch_fomc_statements.py --start 2006-01-01     # fomc_events_daily.csv + raw statement text
+python scripts/score_fomc_tone.py                              # fomc_tone_daily.csv    (hawkish/dovish sentence classifier)
+
+# 4. Sources that need .env keys
+python scripts/fetch_fred_macro.py --start 2006-01-01          # fred_macro_daily.csv   (FRED_API_KEY; CPI via ALFRED vintages)
+python scripts/fetch_sec_filings.py --start 2006-01-01         # sec_filings_daily.csv  (SEC_USER_AGENT_EMAIL; full history + 8-K earnings items)
+
+# 5. Known-future calendar and the join
+python scripts/build_event_calendar.py                         # event_calendar_daily.csv (FOMC/CPI/NFP days, month-end window, opex; runs 120 days ahead)
+python scripts/build_daily_feature_table.py                    # daily_feature_table.csv + daily_feature_table_groups.json
+python scripts/audit_processed_data.py --leakage               # coverage, dead columns, same-day leakage check
 ```
 
-### Macro Data
-```bash
-python scripts/fetch_fred_macro.py --start 2006-01-01
-```
-**Warning:** The FRED script forward-fills lower-frequency data (like monthly CPI) to a daily frequency. To avoid data leakage in model training, ensure you only use data that was actually published on or before the current date. Future data is not used for creating daily features.
+Notes:
 
-### VIX
-```bash
-python scripts/fetch_vix_cboe.py --start 2006-01-01
-```
-
-### GDELT News
-```bash
-python scripts/fetch_gdelt_news.py --start 2023-01-01 --end 2023-01-31
-```
-**Note:** GDELT heavily rate-limits public requests. It is recommended to query small batches of dates at a time.
-
-### SEC Filings
-```bash
-python scripts/fetch_sec_filings.py --start 2023-01-01
-```
-
-### FOMC Statements
-```bash
-python scripts/fetch_fomc_statements.py --start 2023-01-01
-```
+- GDELT's DOC API is rate limited (one request every few minutes). The timeline fetcher caches each topic, so a full refetch takes about half an hour.
+- `fetch_vix_cboe.py` still works but is superseded by `fetch_cboe_vol_indices.py`; the feature table no longer reads `vix_daily.csv`.
+- The CPI columns are built from ALFRED release vintages, so the value on any day is the one that had actually been published by then. The old forward-fill by reference month leaked about six weeks.
 
 ## Feature Table
 
-Join the processed sources into a single daily modeling table aligned to QQQ trading days:
+`build_daily_feature_table.py` joins everything onto QQQ trading days with publication-aware
+alignment and writes two files:
 
-```bash
-python scripts/build_daily_feature_table.py
-```
+- `data/processed/daily_feature_table.csv`: the target `log_return_1d`, raw OHLCV (not features), and every covariate already transformed to a stationary form (log changes, basis-point differences, ratios, trailing z-scores).
+- `data/processed/daily_feature_table_groups.json`: maps each column to a `group` (`qqq`, `market`, `rates`, `uncertainty`, `news`, `fed`, `sec`, `calendar`) and a `role` (`target`, `past`, `known_future`, `raw`). Use it to select feature sets for the ablation ladder and to pass the `known_future` columns as `known_covariates_names`.
 
-This writes `data/processed/daily_feature_table.csv`.
+`--profile core` writes the compact set from the covariate brief (about 20 past-only columns plus the calendar flags); the default `full` profile writes all groups. Future calendar values for the forecast horizon live in `event_calendar_daily.csv`.
 
 ## Chronos-2 Fine-Tuning
 
@@ -161,7 +163,7 @@ The summary report includes an overall verdict, per-horizon metric deltas, and t
 
 ## Output Data Structure
 
-The processed output files are saved in `data/processed/` and share a common `date` column (in `YYYY-MM-DD` format) so they can easily be joined together.
+The processed output files are saved in `data/processed/` and share a common `date` column (in `YYYY-MM-DD` format) so they can easily be joined together. Sections A-F are the original sources; G-L were added in the data-v2 pass.
 
 ### A. QQQ Prices (`data/processed/qqq_ohlcv_daily.csv`) 🟢 Success
 This file contains the core market data for the Nasdaq-100 ETF, aligned to US trading days.
@@ -174,16 +176,15 @@ This file contains the core market data for the Nasdaq-100 ETF, aligned to US tr
   - `volume_change_1d`: The percentage change in trading volume from the previous day.
 
 ### B. FRED Macro Indicators (`data/processed/fred_macro_daily.csv`) 🟢 Success
-This file contains macroeconomic data. Since some macro data (like CPI) is only reported monthly, this script automatically forward-fills the data to a daily frequency so it perfectly aligns with the daily stock prices.
+Calendar-day file of FRED series stored on their reference dates; the feature table applies the publication lags (H.15 rates and the HY spread post the next day, breakevens the same afternoon).
 - **Base columns**: `date`
 - **Features**:
-  - `dff`: Effective Federal Funds Rate.
-  - `dgs10`: 10-Year Treasury Constant Maturity Rate.
-  - `dgs2`: 2-Year Treasury Constant Maturity Rate.
-  - `t10y2y`: The 10-Year minus 2-Year Treasury yield spread (a common recession indicator).
-  - `cpi`: The Consumer Price Index (forward-filled monthly data).
-  - `cpi_yoy`: Year-over-year percentage change in CPI (computed *before* forward filling to prevent calculation errors).
-  - `vix_fred`: The VIX as reported by FRED (acts as a backup).
+  - `dff`, `dgs10`, `dgs2`, `t10y2y`: fed funds, 10y, 2y, and the 10y-2y spread (H.15).
+  - `dfii10`, `t5yie`: 10-year real yield and 5-year breakeven inflation (Treasury-sourced, same day).
+  - `hy_oas`: ICE BofA US High Yield option-adjusted spread.
+  - `cpi`, `cpi_yoy`, `cpi_ref_month`: the CPI level and year-over-year change **as published on or before each day** (ALFRED vintages), not forward-filled by reference month.
+  - `cpi_release_day`: 1 on BLS CPI publication days.
+  - `vix_fred`: kept for compatibility; the builder uses the CBOE close.
 
 ### C. CBOE VIX (`data/processed/vix_daily.csv`) 🟢 Success
 This file contains the official CBOE Volatility Index, which tracks market expectations for volatility over the next 30 days.
@@ -191,34 +192,44 @@ This file contains the official CBOE Volatility Index, which tracks market expec
 - **Features**: 
   - `vix_open`, `vix_high`, `vix_low`, `vix_close`
 
-### D. GDELT News Features (`data/processed/gdelt_topic_daily.csv`) 🔴 Rate Limited
-This file contains daily aggregations of news articles matching specific tech and macro themes.
+### D. GDELT News Features (`data/processed/gdelt_topic_daily.csv`) 🟢 Success (2017 onward)
+Calendar-day counts and average tone from the GDELT DOC 2.0 timeline API for six topics: `ai`, `semiconductor`, `fed`, `inflation`, `big_tech_earnings`, `recession`.
 - **Base columns**: `date`
-- **Features**:
-  - `ai_news_count`, `ai_avg_tone`
-  - `semiconductor_news_count`, `semiconductor_avg_tone`
-  - `fed_news_count`, `fed_avg_tone`
-  - `inflation_news_count`, `inflation_avg_tone`
-  - `big_tech_earnings_count`, `big_tech_earnings_avg_tone`
-  - `recession_news_count`, `recession_avg_tone`
-*(Note: `_avg_tone` columns are currently placeholders for future sentiment analysis).*
+- **Features** per topic: `<topic>_news_count`, `<topic>_avg_tone` (GDELT's -100..100 tone, typically -7..+3), and `<topic>_news_share` (count divided by all articles GDELT monitored that day, which removes coverage growth from the raw counts).
+- Days GDELT did not cover (a 17-day outage in June 2025, the partial final day) are NaN, not zero. The API only reaches back to 2017, so the feature table has NaN before then.
 
 ### E. SEC Filings (`data/processed/sec_filings_daily.csv`) 🟢 Success
 This file tracks major corporate filing events (10-K, 10-Q, 8-K) for the top Nasdaq companies.
 - **Base columns**: `date`
 - **Features**:
-  - `sec_10k_count`: Number of 10-K filings across tracked companies.
-  - `sec_10q_count`: Number of 10-Q filings.
-  - `sec_8k_count`: Number of 8-K filings.
+  - `sec_10k_count`, `sec_10q_count`, `sec_8k_count`, plus `sec_20f_count` and `sec_6k_count` for foreign issuers (TSMC).
   - `sec_total_filings`: Sum of the above.
-  - `{ticker}_filing_event`: Binary flag (1 or 0) if a specific company (e.g., `nvda_filing_event`) filed a document on this date.
+  - `{ticker}_filing_event`: 1 if that company filed one of the tracked forms that day.
+  - `ndx_earnings_count`, `ndx_earnings_premarket`, `ndx_earnings_postmarket`: 8-K filings with Item 2.02 (earnings release), split by EDGAR acceptance time; `{ticker}_earnings_event` per company. Post-market releases are attached to the next trading day by the builder.
+  - History is complete from 2006 (the paginated older submission files are fetched, not only the most recent thousand filings).
 
 ### F. FOMC Statements (`data/processed/fomc_events_daily.csv`) 🟢 Success
 This file parses Federal Reserve monetary policy statements.
 - **Base columns**: `date`
 - **Features**:
-  - `is_fomc_day`: Binary flag (1 if an FOMC statement was released).
-  - `days_since_fomc`: Counter that resets to 0 on statement days.
-  - `fomc_statement_length`: Character length of the statement.
-  - `fomc_hawkish_keyword_count`: Frequency of hawkish terms (e.g., "tightening", "inflation").
-  - `fomc_dovish_keyword_count`: Frequency of dovish terms (e.g., "easing", "rate cut").
+  - `is_fomc_day`: 1 on each of the 168 policy-statement days since 2006 (eight scheduled meetings a year plus the 2008 and 2020 emergency meetings; non-policy releases such as the Statement on Longer-Run Goals are excluded).
+  - `days_since_fomc`: Calendar days since the last statement (NaN before the first one).
+  - `fomc_statement_length`, `fomc_hawkish_keyword_count`, `fomc_dovish_keyword_count`: legacy keyword measures, carried forward between meetings. The classifier-based tone in `fomc_tone_daily.csv` supersedes them.
+
+### G. CBOE volatility indices (`cboe_vol_daily.csv`)
+One row per CBOE trading day from 2006. VIX OHLC plus `vxn_close` (Nasdaq-100 implied vol; 2006-2009 backfilled from FRED `VXNCLS`), `vix3m_close` (from Dec 2007), `vix9d_close` (from 2011), `vvix`, and the derived `vxn_minus_vix`, `vix_term_ratio` (VIX / VIX3M, above 1 = backwardation) and `vix9d_ratio`. Same-evening availability.
+
+### H. Cross-asset closes (`cross_asset_daily.csv`)
+Daily closes and log returns for TLT, HYG (from Apr 2007), SPY, IWM, SMH, GLD, WTI crude (`oil_`) and the dollar index (`dxy_`). The feature table uses TLT and HYG directly and turns SPY, IWM and SMH into relative returns against QQQ.
+
+### I. Economic Policy Uncertainty (`epu_daily.csv`)
+Calendar-day `epu_daily` and `emu_daily` (Equity Market Uncertainty) from policyuncertainty.com, 2005 onward (source runs from 1985). Published the next morning; only the trailing month is revised.
+
+### J. FOMC tone (`fomc_tone_daily.csv`)
+Sentence-level hawkish / dovish classification of every policy statement (168 statements, 2006-2026). Statement days carry `fomc_hawkish_share`, `fomc_dovish_share`, `fomc_net_hawkish`, `fomc_tone_change`; `fomc_net_hawkish_ewma` and `fomc_net_hawkish_last` are carried forward between meetings. Raw sentence labels are in `data/raw/fomc/fomc_sentence_labels.csv`.
+
+### K. Event calendar (`event_calendar_daily.csv`)
+Known-in-advance flags per NYSE trading day, extended 120 days past today: `is_fomc_day`, `is_fomc_day_before`, `days_to_fomc`, `fomc_cycle_week`, `is_cpi_day`, `is_nfp_day` (need `FRED_API_KEY`), `days_to_month_end` (-3..+3 window), `is_month_end`, `is_quarter_end`, `is_opex_day`, `is_opex_week`, `is_quad_witching`, `day_of_week`, `is_pre_holiday`.
+
+### L. Feature table groups (`daily_feature_table_groups.json`)
+Column to `{group, role}` map written by the builder. Roles: `target`, `past`, `known_future`, `raw`.

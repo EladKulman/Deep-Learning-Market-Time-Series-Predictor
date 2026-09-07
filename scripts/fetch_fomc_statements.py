@@ -1,94 +1,219 @@
 #!/usr/bin/env python3
+"""Fetch every FOMC policy statement since 2006 and build a daily FOMC feature file.
+
+Why this rewrite
+----------------
+The previous scraper required the word "statement" in the link text, which the current
+Fed calendar page no longer uses, and it only matched the post-2011 URL pattern. The
+result was one statement per year after 2020 and nothing before 2011.
+
+This version collects every monetary press-release link from the calendar pages by URL
+pattern (both `/newsevents/pressreleases/monetaryYYYYMMDDa.htm` and the older
+`/newsevents/press/monetary/YYYYMMDDa.htm`), keeps the "a" release (the policy statement),
+and verifies the text mentions the federal funds rate so that non-policy releases such as
+the Statement on Longer-Run Goals are excluded.
+
+Outputs
+-------
+* data/raw/fomc/fomc_statements_raw.jsonl : date, url, full text (input for tone scoring)
+* data/processed/fomc_events_daily.csv     : calendar-day file with
+    is_fomc_day, fomc_statement_length, fomc_hawkish_keyword_count,
+    fomc_dovish_keyword_count, days_since_fomc
+
+Timing note: statements are released at 14:00 ET (14:15 before March 2013), i.e. before
+the close, so the day-T flag is legitimately known at the day-T close.
+"""
+
+from __future__ import annotations
+
 import argparse
-import logging
-from pathlib import Path
-import pandas as pd
-import requests
-from bs4 import BeautifulSoup
 import json
+import logging
 import re
 import time
+from html.parser import HTMLParser
+from pathlib import Path
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+import pandas as pd
+import requests
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 BASE_URL = "https://www.federalreserve.gov"
+CALENDAR_URLS = ["/monetarypolicy/fomccalendars.htm"] + [
+    f"/monetarypolicy/fomchistorical{year}.htm" for year in range(2006, 2021)
+]
+LINK_PATTERNS = [
+    re.compile(r'href="(/newsevents/pressreleases/monetary(\d{8})([a-z])\.htm)"'),
+    re.compile(r'href="(/newsevents/press/monetary/(\d{8})([a-z])\.htm)"'),
+]
 
 HAWKISH_KEYWORDS = ["inflation", "tightening", "restrictive", "rate hike", "elevated inflation", "price stability"]
 DOVISH_KEYWORDS = ["slowdown", "unemployment", "easing", "rate cut", "accommodative", "downside risks"]
 
-def fetch_statement_links():
-    links = []
-    # Fetch recent calendar
-    calendars = [
-        "/monetarypolicy/fomccalendars.htm"
-    ]
-    # Add historical years going back to 2006 to match the dataset bounds
-    for year in range(2026, 2005, -1):
-        calendars.append(f"/monetarypolicy/fomchistorical{year}.htm")
-        
-    for cal in calendars:
-        url = BASE_URL + cal
+SESSION = requests.Session()
+SESSION.headers.update({"User-Agent": "qqq-research-pipeline (academic project)"})
+
+
+class ArticleText(HTMLParser):
+    """Collect paragraph text, preferring the div with id="article" when present."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.in_article = False
+        self.article_depth = 0
+        self.in_p = False
+        self.article_parts: list[str] = []
+        self.all_parts: list[str] = []
+        self.skip = 0
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag in ("script", "style"):
+            self.skip += 1
+        if tag == "div":
+            if attrs.get("id") == "article":
+                self.in_article = True
+                self.article_depth = 1
+            elif self.in_article:
+                self.article_depth += 1
+        if tag == "p":
+            self.in_p = True
+
+    def handle_endtag(self, tag):
+        if tag in ("script", "style") and self.skip:
+            self.skip -= 1
+        if tag == "div" and self.in_article:
+            self.article_depth -= 1
+            if self.article_depth == 0:
+                self.in_article = False
+        if tag == "p":
+            self.in_p = False
+
+    def handle_data(self, data):
+        if self.skip or not self.in_p:
+            return
+        text = data.strip()
+        if not text:
+            return
+        self.all_parts.append(text)
+        if self.in_article:
+            self.article_parts.append(text)
+
+    def text(self) -> str:
+        parts = self.article_parts or self.all_parts
+        return " ".join(parts)
+
+
+def get(url: str) -> str:
+    resp = SESSION.get(url, timeout=30)
+    resp.raise_for_status()
+    return resp.text
+
+
+def collect_statement_links() -> dict[str, str]:
+    """Return {date: url} for every 'a' monetary press release on the calendar pages."""
+    links: dict[str, str] = {}
+    for path in CALENDAR_URLS:
+        url = BASE_URL + path
         try:
-            logging.info(f"Scraping FOMC calendar: {url}")
-            resp = requests.get(url, timeout=10)
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.content, "html.parser")
-            
-            # Find all links that might be a statement
-            for a in soup.find_all('a', href=True):
-                text = a.text.strip().lower()
-                href = a['href']
-                if "statement" in text and "/newsevents/pressreleases/monetary" in href:
-                    if not href.startswith("http"):
-                        href = BASE_URL + href
-                    links.append(href)
-        except Exception as e:
-            logging.warning(f"Failed to scrape {url}: {e}")
-            
-    # Remove duplicates
-    return list(set(links))
+            html = get(url)
+        except requests.RequestException as exc:
+            logging.warning("Failed to fetch %s: %s", url, exc)
+            continue
+        found = 0
+        for pattern in LINK_PATTERNS:
+            for href, ymd, suffix in pattern.findall(html):
+                if suffix != "a":
+                    continue
+                date = f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:8]}"
+                links.setdefault(date, BASE_URL + href)
+                found += 1
+        logging.info("%s: %d statement links", path, found)
+        time.sleep(0.3)
+    return dict(sorted(links.items()))
 
-def fetch_statement_text(url):
-    try:
-        resp = requests.get(url, timeout=10)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.content, "html.parser")
-        
-        # Text is usually within an element with id="article"
-        article = soup.find(id="article")
-        if article:
-            text = article.get_text(separator=' ', strip=True)
-        else:
-            # Fallback
-            paragraphs = soup.find_all('p')
-            text = " ".join([p.get_text(strip=True) for p in paragraphs])
-            
-        return text
-    except Exception as e:
-        logging.warning(f"Failed to fetch statement text from {url}: {e}")
-        return ""
 
-def count_keywords(text, keywords):
-    text_lower = text.lower()
-    count = 0
-    for kw in keywords:
-        # Simple string count
-        count += text_lower.count(kw.lower())
-    return count
+def is_policy_statement(text: str) -> bool:
+    """Policy statements always set or reaffirm the federal funds rate target.
 
-def extract_date_from_url(url):
-    # e.g., https://www.federalreserve.gov/newsevents/pressreleases/monetary20230726a.htm
-    match = re.search(r'monetary(\d{8})[a-z]?\.htm', url)
-    if match:
-        date_str = match.group(1)
-        return f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
-    return None
+    Since April 2020 the statement body refers to "the Committee" rather than spelling out
+    "Federal Open Market Committee", so only the funds-rate wording is required. The
+    Statement on Longer-Run Goals (revised at the 2025 Jackson Hole meeting, among others)
+    is published under the same URL pattern and is excluded by its title.
+    """
+    lowered = text.lower()
+    if "longer-run goals and monetary policy strategy" in lowered[:400]:
+        return False
+    return "committee" in lowered and "federal funds rate" in lowered
 
-def main():
+
+def count_keywords(text: str, keywords: list[str]) -> int:
+    lowered = text.lower()
+    return sum(lowered.count(kw) for kw in keywords)
+
+
+def fetch_statements(links: dict[str, str], cache_path: Path, refresh: bool) -> list[dict]:
+    cached: dict[str, dict] = {}
+    if cache_path.exists() and not refresh:
+        for line in cache_path.read_text(encoding="utf-8").splitlines():
+            record = json.loads(line)
+            cached[record["date"]] = record
+
+    records: list[dict] = []
+    for date, url in links.items():
+        if date in cached and cached[date].get("text"):
+            records.append(cached[date])
+            continue
+        try:
+            html = get(url)
+        except requests.RequestException as exc:
+            logging.warning("Failed %s: %s", url, exc)
+            continue
+        parser = ArticleText()
+        parser.feed(html)
+        text = parser.text()
+        if not is_policy_statement(text):
+            logging.info("Skipping non-policy release %s (%s)", date, url)
+            continue
+        records.append({"date": date, "title": f"FOMC Statement {date}", "url": url, "text": text})
+        logging.info("Fetched statement %s (%d chars)", date, len(text))
+        time.sleep(0.5)
+
+    records.sort(key=lambda r: r["date"])
+    with cache_path.open("w", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record) + "\n")
+    return records
+
+
+def build_daily(records: list[dict], start: str, end: str) -> pd.DataFrame:
+    statements = pd.DataFrame(records)
+    statements["fomc_statement_length"] = statements["text"].str.len()
+    statements["fomc_hawkish_keyword_count"] = statements["text"].apply(lambda t: count_keywords(t, HAWKISH_KEYWORDS))
+    statements["fomc_dovish_keyword_count"] = statements["text"].apply(lambda t: count_keywords(t, DOVISH_KEYWORDS))
+    statements["is_fomc_day"] = 1
+    statements = statements[
+        ["date", "is_fomc_day", "fomc_statement_length", "fomc_hawkish_keyword_count", "fomc_dovish_keyword_count"]
+    ]
+
+    days = pd.DataFrame({"date": pd.date_range(start, end, freq="D").strftime("%Y-%m-%d")})
+    daily = days.merge(statements, on="date", how="left")
+    daily["is_fomc_day"] = daily["is_fomc_day"].fillna(0).astype(int)
+    for column in ("fomc_statement_length", "fomc_hawkish_keyword_count", "fomc_dovish_keyword_count"):
+        daily[column] = daily[column].ffill()  # value of the most recent statement; NaN before the first one
+
+    last_fomc = pd.Series(pd.to_datetime(daily["date"]).where(daily["is_fomc_day"] == 1)).ffill()
+    daily["days_since_fomc"] = (pd.to_datetime(daily["date"]) - last_fomc).dt.days
+    return daily
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch FOMC statements")
-    parser.add_argument("--start", type=str, default="2023-01-01", help="Start date (YYYY-MM-DD)")
-    parser.add_argument("--end", type=str, default=None, help="End date (YYYY-MM-DD)")
-    parser.add_argument("--out-dir", type=str, default="data", help="Base output directory")
+    parser.add_argument("--start", default="2006-01-01")
+    parser.add_argument("--end", default=None)
+    parser.add_argument("--out-dir", default="data")
+    parser.add_argument("--refresh", action="store_true", help="Re-download statements already cached")
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir)
@@ -96,110 +221,23 @@ def main():
     proc_dir = out_dir / "processed"
     raw_dir.mkdir(parents=True, exist_ok=True)
     proc_dir.mkdir(parents=True, exist_ok=True)
-    
-    links = fetch_statement_links()
-    
-    raw_data = []
-    
-    for link in links:
-        date_str = extract_date_from_url(link)
-        if not date_str:
-            continue
-            
-        logging.info(f"Fetching statement for {date_str}...")
-        text = fetch_statement_text(link)
-        if text:
-            raw_data.append({
-                "date": date_str,
-                "title": f"FOMC Statement {date_str}",
-                "url": link,
-                "text": text
-            })
-        time.sleep(0.5) # Polite scraping
-        
-    if not raw_data:
-        logging.error("No FOMC statements fetched.")
-        return
-        
-    # Save raw
-    raw_path = raw_dir / "fomc_statements_raw.jsonl"
-    with open(raw_path, 'w', encoding='utf-8') as f:
-        for r in raw_data:
-            f.write(json.dumps(r) + "\n")
-            
-    # Process
-    df = pd.DataFrame(raw_data)
-    df = df.sort_values('date').reset_index(drop=True)
-    
-    # We DO NOT filter df here. We need all historical data to forward-fill properly.
-        
-    # Compute base metrics
-    df['fomc_statement_length'] = df['text'].apply(len)
-    df['fomc_hawkish_keyword_count'] = df['text'].apply(lambda x: count_keywords(x, HAWKISH_KEYWORDS))
-    df['fomc_dovish_keyword_count'] = df['text'].apply(lambda x: count_keywords(x, DOVISH_KEYWORDS))
-    df['is_fomc_day'] = 1
-    df['last_fomc_statement_text'] = df['text']
-    
-    df = df[['date', 'is_fomc_day', 'last_fomc_statement_text', 'fomc_statement_length', 'fomc_hawkish_keyword_count', 'fomc_dovish_keyword_count']]
-    
-    # Create daily aggregate covering the entire history to allow forward-filling
-    min_date = df['date'].min() if not df.empty else args.start
-    start_dt = min(args.start, min_date) if args.start else min_date
-    end_dt = args.end if args.end else pd.Timestamp.today().strftime('%Y-%m-%d')
-    
-    dates = pd.date_range(start=start_dt, end=end_dt, freq='D').strftime('%Y-%m-%d')
-    daily_df = pd.DataFrame({'date': dates})
-    
-    daily_df = pd.merge(daily_df, df, on='date', how='left')
-    
-    daily_df['is_fomc_day'] = daily_df['is_fomc_day'].fillna(0).astype(int)
-    
-    # Forward fill the features
-    daily_df['last_fomc_statement_text'] = daily_df['last_fomc_statement_text'].ffill()
-    daily_df['fomc_statement_length'] = daily_df['fomc_statement_length'].ffill().fillna(0)
-    daily_df['fomc_hawkish_keyword_count'] = daily_df['fomc_hawkish_keyword_count'].ffill().fillna(0)
-    daily_df['fomc_dovish_keyword_count'] = daily_df['fomc_dovish_keyword_count'].ffill().fillna(0)
-    
-    # Calculate days since fomc
-    # We find indices of FOMC days
-    fomc_indices = daily_df[daily_df['is_fomc_day'] == 1].index
-    
-    # If there are no FOMC days, we can't calculate days since.
-    daily_df['days_since_fomc'] = pd.NA
-    if not fomc_indices.empty:
-        # A simple forward pass to count days
-        days_since = 0
-        has_seen_first = False
-        for i in range(len(daily_df)):
-            if daily_df.loc[i, 'is_fomc_day'] == 1:
-                days_since = 0
-                has_seen_first = True
-            elif has_seen_first:
-                days_since += 1
-            
-            if has_seen_first:
-                daily_df.loc[i, 'days_since_fomc'] = days_since
 
-    # Now filter the bounds for the final output
-    if args.start:
-        daily_df = daily_df[daily_df['date'] >= args.start]
-    if args.end:
-        daily_df = daily_df[daily_df['date'] <= args.end]
+    links = collect_statement_links()
+    logging.info("Found %d candidate statement links (%s -> %s)", len(links), min(links), max(links))
+    records = fetch_statements(links, raw_dir / "fomc_statements_raw.jsonl", args.refresh)
+    records = [r for r in records if r["date"] >= args.start]
+    if not records:
+        raise SystemExit("No FOMC statements fetched")
 
-    # Drop the textual column so the final CSV is purely numeric for time-series modeling
-    if 'last_fomc_statement_text' in daily_df.columns:
-        daily_df = daily_df.drop(columns=['last_fomc_statement_text'])
+    end = args.end or pd.Timestamp.today().strftime("%Y-%m-%d")
+    daily = build_daily(records, args.start, end)
+    path = proc_dir / "fomc_events_daily.csv"
+    daily.to_csv(path, index=False)
 
-    proc_path = proc_dir / "fomc_events_daily.csv"
-    daily_df.to_csv(proc_path, index=False)
-    
-    logging.info("--- SUMMARY: FOMC ---")
-    logging.info(f"Statements found: {len(df)}")
-    if len(df) > 0:
-        logging.info(f"Date range: {df['date'].min()} to {df['date'].max()}")
-    logging.info(f"Days processed: {len(daily_df)}")
-    logging.info(f"Processed Output: {proc_path}")
-    logging.info("---------------------\n")
+    per_year = pd.Series([r["date"][:4] for r in records]).value_counts().sort_index()
+    logging.info("Statements per year:\n%s", per_year.to_string())
+    logging.info("Wrote %s (%d days, %d statements)", path, len(daily), len(records))
+
 
 if __name__ == "__main__":
     main()

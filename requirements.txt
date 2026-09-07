@@ -1,11 +1,16 @@
 yfinance>=0.2.36
 pandas>=2.0.0
+numpy>=1.26
 fredapi>=0.5.0
 pandas-datareader>=0.10.0
 python-dotenv>=1.0.0
 requests>=2.31.0
+beautifulsoup4>=4.12
+lxml>=5.0
+openpyxl>=3.1
+pandas_market_calendars>=4.3
 torch>=2.2,<3
 transformers>=4.41,<6
 accelerate>=1.1.0,<2
-chronos-forecasting>=2.3.1
+chronos-forecasting>=2.1.0
 peft>=0.18.1,<1

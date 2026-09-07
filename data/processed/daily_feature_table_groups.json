@@ -1,0 +1,278 @@
+{
+  "log_return_1d": {
+    "group": "target",
+    "role": "target"
+  },
+  "open": {
+    "group": "raw",
+    "role": "raw"
+  },
+  "high": {
+    "group": "raw",
+    "role": "raw"
+  },
+  "low": {
+    "group": "raw",
+    "role": "raw"
+  },
+  "close": {
+    "group": "raw",
+    "role": "raw"
+  },
+  "adj_close": {
+    "group": "raw",
+    "role": "raw"
+  },
+  "volume": {
+    "group": "raw",
+    "role": "raw"
+  },
+  "overnight_gap": {
+    "group": "qqq",
+    "role": "past"
+  },
+  "parkinson_vol_1d": {
+    "group": "qqq",
+    "role": "past"
+  },
+  "parkinson_vol_22d": {
+    "group": "qqq",
+    "role": "past"
+  },
+  "volatility_20d": {
+    "group": "qqq",
+    "role": "past"
+  },
+  "volume_z_20d": {
+    "group": "qqq",
+    "role": "past"
+  },
+  "volume_change_1d": {
+    "group": "qqq",
+    "role": "past"
+  },
+  "mom_21d": {
+    "group": "qqq",
+    "role": "past"
+  },
+  "mom_63d": {
+    "group": "qqq",
+    "role": "past"
+  },
+  "dist_50dma": {
+    "group": "qqq",
+    "role": "past"
+  },
+  "dist_200dma": {
+    "group": "qqq",
+    "role": "past"
+  },
+  "vxn_close": {
+    "group": "market",
+    "role": "past"
+  },
+  "vxn_log_chg": {
+    "group": "market",
+    "role": "past"
+  },
+  "vxn_minus_vix": {
+    "group": "market",
+    "role": "past"
+  },
+  "vix_term_ratio": {
+    "group": "market",
+    "role": "past"
+  },
+  "vix9d_ratio": {
+    "group": "market",
+    "role": "past"
+  },
+  "vvix_log_chg": {
+    "group": "market",
+    "role": "past"
+  },
+  "tlt_log_ret": {
+    "group": "market",
+    "role": "past"
+  },
+  "hyg_log_ret": {
+    "group": "market",
+    "role": "past"
+  },
+  "qqq_minus_spy": {
+    "group": "market",
+    "role": "past"
+  },
+  "iwm_minus_spy": {
+    "group": "market",
+    "role": "past"
+  },
+  "smh_minus_qqq": {
+    "group": "market",
+    "role": "past"
+  },
+  "gld_log_ret": {
+    "group": "market",
+    "role": "past"
+  },
+  "oil_log_ret": {
+    "group": "market",
+    "role": "past"
+  },
+  "dxy_log_ret": {
+    "group": "market",
+    "role": "past"
+  },
+  "d_dff_bp": {
+    "group": "rates",
+    "role": "past"
+  },
+  "d_dgs10_bp": {
+    "group": "rates",
+    "role": "past"
+  },
+  "d_dgs2_bp": {
+    "group": "rates",
+    "role": "past"
+  },
+  "d_t10y2y_bp": {
+    "group": "rates",
+    "role": "past"
+  },
+  "t10y2y_lag1": {
+    "group": "rates",
+    "role": "past"
+  },
+  "cpi_yoy": {
+    "group": "rates",
+    "role": "past"
+  },
+  "epu_log": {
+    "group": "uncertainty",
+    "role": "past"
+  },
+  "emu_log": {
+    "group": "uncertainty",
+    "role": "past"
+  },
+  "gdelt_ai_news_share": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_semiconductor_news_share": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_fed_news_share": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_inflation_news_share": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_big_tech_earnings_news_share": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_recession_news_share": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_ai_avg_tone": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_semiconductor_avg_tone": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_fed_avg_tone": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_inflation_avg_tone": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_big_tech_earnings_avg_tone": {
+    "group": "news",
+    "role": "past"
+  },
+  "gdelt_recession_avg_tone": {
+    "group": "news",
+    "role": "past"
+  },
+  "fomc_net_hawkish_last": {
+    "group": "fed",
+    "role": "past"
+  },
+  "fomc_net_hawkish_ewma": {
+    "group": "fed",
+    "role": "past"
+  },
+  "fomc_tone_change_last": {
+    "group": "fed",
+    "role": "past"
+  },
+  "days_since_fomc": {
+    "group": "fed",
+    "role": "past"
+  },
+  "sec_8k_count": {
+    "group": "sec",
+    "role": "past"
+  },
+  "sec_total_filings": {
+    "group": "sec",
+    "role": "past"
+  },
+  "is_fomc_day": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "days_to_fomc": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "is_fomc_day_before": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "fomc_cycle_week": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "is_month_end": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "is_quarter_end": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "days_to_month_end": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "is_opex_day": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "is_opex_week": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "is_quad_witching": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "day_of_week": {
+    "group": "calendar",
+    "role": "known_future"
+  },
+  "is_pre_holiday": {
+    "group": "calendar",
+    "role": "known_future"
+  }
+}

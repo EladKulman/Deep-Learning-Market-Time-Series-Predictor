@@ -1,176 +1,179 @@
 #!/usr/bin/env python3
-import os
+"""Fetch SEC EDGAR filing events for the largest Nasdaq-100 companies.
+
+Changes versus the first version
+--------------------------------
+* EDGAR's submissions endpoint only returns the most recent ~1,000 filings inline; older
+  ones live in the paginated files listed under ``filings.files``. Those are now fetched, so
+  history is complete back to 2006 instead of silently starting in 2015.
+* TSMC is a foreign private issuer and files 20-F (annual) and 6-K (current) instead of
+  10-K / 10-Q / 8-K. Those forms are now counted.
+* 8-K filings carry an ``items`` list. Item 2.02 ("Results of Operations and Financial
+  Condition") is the earnings release, which gives a free, authoritative earnings calendar
+  back to 2003. The acceptance timestamp splits it into pre-market (before 09:30 ET) and
+  post-market (16:00 ET or later) events so the feature table can attach the post-market
+  ones to the next trading day.
+
+Output: data/processed/sec_filings_daily.csv, one row per calendar day from --start.
+"""
+
+from __future__ import annotations
+
 import argparse
+import json
 import logging
+import os
+import time
 from pathlib import Path
+
 import pandas as pd
 import requests
-import json
-import time
 from dotenv import load_dotenv
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 TICKERS = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "AMD", "INTC", "TSM", "AVGO"]
-TARGET_FORMS = ["10-K", "10-Q", "8-K"]
+FORM_COLUMNS = {
+    "10-K": "sec_10k_count",
+    "10-Q": "sec_10q_count",
+    "8-K": "sec_8k_count",
+    "20-F": "sec_20f_count",
+    "6-K": "sec_6k_count",
+}
+EARNINGS_ITEM = "2.02"
 
-def get_headers():
+
+def get_headers() -> dict[str, str]:
     load_dotenv()
-    email = os.environ.get("SEC_USER_AGENT_EMAIL", "test@example.com")
-    return {
-        "User-Agent": f"Nasdaq100ForecastingProject/0.1 contact: {email}",
-        "Accept-Encoding": "gzip, deflate"
-    }
+    email = os.environ.get("SEC_USER_AGENT_EMAIL", "")
+    if not email or "example.com" in email or email.startswith("your_"):
+        raise SystemExit("Set SEC_USER_AGENT_EMAIL in .env to a real contact address (SEC requires it).")
+    return {"User-Agent": f"Nasdaq100ForecastingProject/0.2 contact: {email}", "Accept-Encoding": "gzip, deflate"}
 
-def fetch_company_tickers(headers):
-    url = "https://www.sec.gov/files/company_tickers.json"
-    response = requests.get(url, headers=headers, timeout=10)
-    response.raise_for_status()
-    data = response.json()
-    
-    # Map ticker to CIK
-    ticker_to_cik = {}
-    for idx, company in data.items():
-        ticker_to_cik[company['ticker']] = str(company['cik_str']).zfill(10)
-    return ticker_to_cik
 
-def fetch_submissions(cik, headers):
-    url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-    response = requests.get(url, headers=headers, timeout=10)
-    if response.status_code == 404:
-        # Some foreign issuers like TSM might not have normal JSON submissions or use different formats
-        logging.warning(f"CIK {cik} returned 404. Might be a foreign issuer or unmapped.")
-        return {}
-    response.raise_for_status()
-    return response.json()
+def get_json(url: str, headers: dict[str, str], retries: int = 3) -> dict:
+    for attempt in range(retries):
+        resp = requests.get(url, headers=headers, timeout=30)
+        if resp.status_code == 200:
+            return resp.json()
+        if resp.status_code == 404:
+            logging.warning("%s returned 404", url)
+            return {}
+        logging.warning("%s -> %s (attempt %d)", url, resp.status_code, attempt + 1)
+        time.sleep(2 * (attempt + 1))
+    raise RuntimeError(f"Failed to fetch {url}")
 
-def process_submissions(data, ticker, start_date, end_date):
-    if not data or 'filings' not in data or 'recent' not in data['filings']:
+
+def fetch_company_tickers(headers: dict[str, str]) -> dict[str, str]:
+    data = get_json("https://www.sec.gov/files/company_tickers.json", headers)
+    return {row["ticker"]: str(row["cik_str"]).zfill(10) for row in data.values()}
+
+
+def fetch_all_filings(cik: str, headers: dict[str, str], raw_dir: Path, ticker: str) -> pd.DataFrame:
+    """Return every filing for a CIK, combining the inline 'recent' block with the paginated files."""
+    main = get_json(f"https://data.sec.gov/submissions/CIK{cik}.json", headers)
+    if not main:
         return pd.DataFrame()
-        
-    recent = data['filings']['recent']
-    df = pd.DataFrame(recent)
-    
-    if df.empty:
-        return df
-        
-    # Filter forms
-    df = df[df['form'].isin(TARGET_FORMS)]
-    
-    # Required columns: date (we will use filingDate as the event date), ticker, form, filing_date, report_date, accession_number, primary_document
-    df = df.rename(columns={
-        'filingDate': 'filing_date',
-        'reportDate': 'report_date',
-        'accessionNumber': 'accession_number',
-        'primaryDocument': 'primary_document'
-    })
-    
-    # The event date is the filing date
-    df['date'] = df['filing_date']
-    df['ticker'] = ticker
-    
-    # Filter by date range
-    df = df[df['date'] >= start_date]
-    if end_date:
-        df = df[df['date'] <= end_date]
-        
-    cols = ['date', 'ticker', 'form', 'filing_date', 'report_date', 'accession_number', 'primary_document']
-    # Keep available
-    cols = [c for c in cols if c in df.columns]
-    df = df[cols]
-    return df
+    (raw_dir / f"sec_submissions_{ticker}.json").write_text(json.dumps(main), encoding="utf-8")
 
-def main():
-    parser = argparse.ArgumentParser(description="Fetch SEC filings for major tech companies")
-    parser.add_argument("--start", type=str, default="2023-01-01", help="Start date (YYYY-MM-DD)")
-    parser.add_argument("--end", type=str, default=None, help="End date (YYYY-MM-DD)")
-    parser.add_argument("--out-dir", type=str, default="data", help="Base output directory")
+    parts = [pd.DataFrame(main["filings"]["recent"])]
+    for extra in main["filings"].get("files", []):
+        time.sleep(0.15)
+        older = get_json(f"https://data.sec.gov/submissions/{extra['name']}", headers)
+        if older:
+            (raw_dir / f"sec_submissions_{ticker}_{extra['name']}").write_text(json.dumps(older), encoding="utf-8")
+            parts.append(pd.DataFrame(older))
+            logging.info("  %s: fetched %s (%s -> %s)", ticker, extra["name"], extra["filingFrom"], extra["filingTo"])
+    return pd.concat(parts, ignore_index=True)
+
+
+def process_filings(frame: pd.DataFrame, ticker: str, start: str, end: str | None) -> pd.DataFrame:
+    if frame.empty:
+        return frame
+    frame = frame[frame["form"].isin(FORM_COLUMNS)].copy()
+    frame["date"] = frame["filingDate"]
+    frame = frame[frame["date"] >= start]
+    if end:
+        frame = frame[frame["date"] <= end]
+    frame["ticker"] = ticker
+    items = frame.get("items", pd.Series("", index=frame.index)).fillna("")
+    frame["is_earnings"] = (frame["form"] == "8-K") & items.str.split(",").apply(
+        lambda parts: EARNINGS_ITEM in [p.strip() for p in parts]
+    )
+    accepted = pd.to_datetime(frame.get("acceptanceDateTime"), errors="coerce")
+    minutes = accepted.dt.hour * 60 + accepted.dt.minute
+    frame["session"] = "unknown"
+    frame.loc[minutes < 9 * 60 + 30, "session"] = "pre"
+    frame.loc[(minutes >= 9 * 60 + 30) & (minutes < 16 * 60), "session"] = "intraday"
+    frame.loc[minutes >= 16 * 60, "session"] = "post"
+    return frame[["date", "ticker", "form", "is_earnings", "session", "accessionNumber"]]
+
+
+def build_daily(filings: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
+    daily = pd.DataFrame({"date": pd.date_range(start, end, freq="D").strftime("%Y-%m-%d")})
+
+    counts = filings.groupby(["date", "form"]).size().unstack(fill_value=0)
+    for form, column in FORM_COLUMNS.items():
+        daily[column] = daily["date"].map(counts[form] if form in counts else pd.Series(dtype=int)).fillna(0).astype(int)
+    daily["sec_total_filings"] = daily[list(FORM_COLUMNS.values())].sum(axis=1)
+
+    for ticker in TICKERS:
+        dates = set(filings.loc[filings["ticker"] == ticker, "date"])
+        daily[f"{ticker.lower()}_filing_event"] = daily["date"].isin(dates).astype(int)
+
+    earnings = filings[filings["is_earnings"]]
+    daily["ndx_earnings_count"] = daily["date"].map(earnings.groupby("date").size()).fillna(0).astype(int)
+    for session in ("pre", "post"):
+        subset = earnings[earnings["session"] == session]
+        daily[f"ndx_earnings_{session}market"] = daily["date"].map(subset.groupby("date").size()).fillna(0).astype(int)
+    for ticker in TICKERS:
+        dates = set(earnings.loc[earnings["ticker"] == ticker, "date"])
+        daily[f"{ticker.lower()}_earnings_event"] = daily["date"].isin(dates).astype(int)
+    return daily
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Fetch SEC filings for major Nasdaq-100 companies")
+    parser.add_argument("--start", default="2006-01-01")
+    parser.add_argument("--end", default=None)
+    parser.add_argument("--out-dir", default="data")
     args = parser.parse_args()
 
-    out_dir = Path(args.out_dir)
-    raw_dir = out_dir / "raw" / "sec"
-    proc_dir = out_dir / "processed"
+    raw_dir = Path(args.out_dir) / "raw" / "sec"
+    proc_dir = Path(args.out_dir) / "processed"
     raw_dir.mkdir(parents=True, exist_ok=True)
     proc_dir.mkdir(parents=True, exist_ok=True)
-    
+
     headers = get_headers()
-    
-    logging.info("Fetching SEC company_tickers.json...")
     ticker_to_cik = fetch_company_tickers(headers)
-    
-    all_filings = []
-    
+
+    frames = []
     for ticker in TICKERS:
         cik = ticker_to_cik.get(ticker)
         if not cik:
-            logging.warning(f"Could not find CIK for {ticker}")
+            logging.warning("No CIK for %s", ticker)
             continue
-            
-        logging.info(f"Fetching submissions for {ticker} (CIK: {cik})...")
-        data = fetch_submissions(cik, headers)
-        
-        if data:
-            raw_path = raw_dir / f"sec_submissions_{ticker}.json"
-            with open(raw_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f)
-                
-            df = process_submissions(data, ticker, args.start, args.end)
-            if not df.empty:
-                all_filings.append(df)
-                latest = df['date'].max()
-                logging.info(f"Found {len(df)} filings for {ticker}. Latest: {latest}")
-            else:
-                logging.warning(f"No targeted filings found for {ticker} in date range.")
-                
-        # SEC rate limit is 10 requests per second. Be safe with 5 per second.
+        logging.info("Fetching %s (CIK %s)", ticker, cik)
+        filings = process_filings(fetch_all_filings(cik, headers, raw_dir, ticker), ticker, args.start, args.end)
+        if filings.empty:
+            logging.warning("No target filings for %s", ticker)
+            continue
+        logging.info("  %s: %d filings, %d earnings 8-Ks, %s -> %s", ticker, len(filings),
+                     int(filings["is_earnings"].sum()), filings["date"].min(), filings["date"].max())
+        frames.append(filings)
         time.sleep(0.2)
-        
-    if not all_filings:
-        logging.error("No filings found for any company.")
-        return
-        
-    combined_df = pd.concat(all_filings, ignore_index=True)
-    
-    # Aggregate daily
-    # We want: date, sec_10k_count, sec_10q_count, sec_8k_count, sec_total_filings, and event flags per company
-    dates = pd.date_range(start=args.start, end=args.end if args.end else pd.Timestamp.today().strftime('%Y-%m-%d'), freq='D').strftime('%Y-%m-%d')
-    daily_df = pd.DataFrame({'date': dates})
-    
-    # Form counts
-    form_counts = combined_df.groupby(['date', 'form']).size().unstack(fill_value=0).reset_index()
-    # Ensure form columns exist
-    for f in TARGET_FORMS:
-        if f not in form_counts.columns:
-            form_counts[f] = 0
-            
-    form_counts = form_counts.rename(columns={
-        '10-K': 'sec_10k_count',
-        '10-Q': 'sec_10q_count',
-        '8-K': 'sec_8k_count'
-    })
-    form_counts['sec_total_filings'] = form_counts['sec_10k_count'] + form_counts['sec_10q_count'] + form_counts['sec_8k_count']
-    
-    daily_df = pd.merge(daily_df, form_counts, on='date', how='left').fillna(0)
-    
-    # Event flags
-    # Which companies filed on which date?
-    for ticker in TICKERS:
-        col_name = f"{ticker.lower()}_filing_event"
-        ticker_dates = combined_df[combined_df['ticker'] == ticker]['date'].unique()
-        daily_df[col_name] = daily_df['date'].isin(ticker_dates).astype(int)
-        
-    # Cast count columns to integer to look cleaner
-    count_cols = ['sec_10k_count', 'sec_10q_count', 'sec_8k_count', 'sec_total_filings']
-    daily_df[count_cols] = daily_df[count_cols].astype(int)
-        
-    proc_path = proc_dir / "sec_filings_daily.csv"
-    daily_df.to_csv(proc_path, index=False)
-    
-    logging.info("--- SUMMARY: SEC FILINGS ---")
-    logging.info(f"Days processed: {len(daily_df)}")
-    logging.info(f"Total Filings Found: {len(combined_df)}")
-    logging.info(f"Processed Output: {proc_path}")
-    logging.info("----------------------------\n")
+
+    filings = pd.concat(frames, ignore_index=True)
+    filings.to_csv(raw_dir / "sec_filings_long.csv", index=False)
+
+    end = args.end or pd.Timestamp.today().strftime("%Y-%m-%d")
+    daily = build_daily(filings, args.start, end)
+    path = proc_dir / "sec_filings_daily.csv"
+    daily.to_csv(path, index=False)
+    per_year = filings.groupby(filings["date"].str[:4]).size()
+    logging.info("Filings per year:\n%s", per_year.to_string())
+    logging.info("Wrote %s (%d days, %d columns)", path, len(daily), len(daily.columns))
+
 
 if __name__ == "__main__":
     main()
