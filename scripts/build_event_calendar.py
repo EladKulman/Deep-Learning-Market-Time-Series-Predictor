@@ -113,7 +113,10 @@ def build(start: str, end: str, fomc_file: Path) -> pd.DataFrame:
     # --- FOMC ---
     fomc = pd.read_csv(fomc_file)
     statement_dates = pd.to_datetime(fomc.loc[fomc["is_fomc_day"] == 1, "date"])
-    all_fomc = sorted(set(statement_dates) | set(scheduled_fomc_from_fed_page()))
+    # Seed with the last meetings before the sample so days_since_fomc and the cycle week
+    # are defined from the first row (the statement file starts in 2006).
+    seed = {pd.Timestamp("2005-11-01"), pd.Timestamp("2005-12-13")}
+    all_fomc = sorted(set(statement_dates) | set(scheduled_fomc_from_fed_page()) | seed)
     fomc_index = pd.DatetimeIndex(all_fomc)
     table["is_fomc_day"] = table["date"].isin(fomc_index).astype(int)
     next_idx = fomc_index.searchsorted(table["date"], side="left")

@@ -26,7 +26,7 @@ Read this before adding or changing a processed CSV.
 | FRED H.15 rates (DFF, DGS2, DGS10, T10Y2Y) | next day 16:15 ET | shift +1 day |
 | FRED breakevens / real yields (T5YIE, DFII10) | same afternoon | none |
 | CPI (ALFRED vintage) | release day 08:30 ET | already vintage-aligned |
-| EPU / EMU (calendar days) | next morning | use value dated T-1; weekend values roll into Monday |
+| EPU / EMU (calendar days) | next morning | primary columns are the trailing 7-day mean through T-1 (single weekend days are too noisy); raw T-1 day kept as `*_log_1d` |
 | GDELT (calendar days) | after 00:00 UTC | use value dated T-1; weekends roll into Monday |
 | FOMC statement / tone | 14:00 ET same day | none for a close-to-close target |
 | SEC 8-K earnings, post-market | after the close | shift +1 day (pre-market stays on T) |

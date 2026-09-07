@@ -163,6 +163,14 @@
     "group": "uncertainty",
     "role": "past"
   },
+  "epu_log_1d": {
+    "group": "uncertainty",
+    "role": "past"
+  },
+  "emu_log_1d": {
+    "group": "uncertainty",
+    "role": "past"
+  },
   "gdelt_ai_news_share": {
     "group": "news",
     "role": "past"

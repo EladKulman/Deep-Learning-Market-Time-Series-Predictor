@@ -83,12 +83,18 @@ def asof_join(base: pd.DataFrame, other: pd.DataFrame, columns: list[str], lag_d
     columns = [c for c in columns if c in other.columns]
     if not columns:
         return base
-    right = other[["date", *columns]].copy()
-    right["avail"] = right["date"] + pd.Timedelta(days=lag_days)
-    right = right.drop(columns=["date"]).sort_values("avail")
-    if suffix:
-        right = right.rename(columns={c: f"{c}{suffix}" for c in columns})
-    return pd.merge_asof(base.sort_values("date"), right, left_on="date", right_on="avail", direction="backward").drop(columns=["avail"])
+    base = base.sort_values("date")
+    # One as-of merge per column, dropping that column's NaN rows first: calendar-day source
+    # files have blank weekend rows, and a joint merge would hand Monday the blank Sunday row
+    # instead of Friday's value.
+    for column in columns:
+        right = other[["date", column]].dropna(subset=[column]).copy()
+        right["avail"] = right["date"] + pd.Timedelta(days=lag_days)
+        right = right.drop(columns=["date"]).sort_values("avail")
+        if suffix:
+            right = right.rename(columns={column: f"{column}{suffix}"})
+        base = pd.merge_asof(base, right, left_on="date", right_on="avail", direction="backward").drop(columns=["avail"])
+    return base
 
 
 def window_mean_join(base: pd.DataFrame, other: pd.DataFrame, columns: list[str], lag_days: int = 1) -> pd.DataFrame:
@@ -174,11 +180,20 @@ def build(input_dir: Path, profile: str) -> tuple[pd.DataFrame, dict]:
 
     # --- uncertainty and news: calendar days, available the next morning ---
     if "epu" in src:
-        table = window_mean_join(table, src["epu"], ["epu_daily", "emu_daily"], lag_days=1)
-        table["epu_log"] = np.log(table["epu_daily"])
-        table["emu_log"] = np.log(table["emu_daily"])
-        table = table.drop(columns=["epu_daily", "emu_daily"])
-        groups.update({"epu_log": {"group": "uncertainty", "role": "past"}, "emu_log": {"group": "uncertainty", "role": "past"}})
+        # Single-day EPU values are dominated by weekend days with few articles (the raw
+        # maxima are all Saturdays and Sundays), so the primary series is the trailing
+        # 7-calendar-day mean; the raw day is kept as a secondary column.
+        epu = src["epu"].copy()
+        for column in ("epu_daily", "emu_daily"):
+            epu[f"{column}_7d"] = epu[column].rolling(7, min_periods=4).mean()
+        table = window_mean_join(table, epu, ["epu_daily", "emu_daily", "epu_daily_7d", "emu_daily_7d"], lag_days=1)
+        table["epu_log"] = np.log(table["epu_daily_7d"])
+        table["emu_log"] = np.log(table["emu_daily_7d"])
+        table["epu_log_1d"] = np.log(table["epu_daily"])
+        table["emu_log_1d"] = np.log(table["emu_daily"])
+        table = table.drop(columns=["epu_daily", "emu_daily", "epu_daily_7d", "emu_daily_7d"])
+        for column in ("epu_log", "emu_log", "epu_log_1d", "emu_log_1d"):
+            groups[column] = {"group": "uncertainty", "role": "past"}
     if "gdelt" in src:
         columns = [f"{t}_news_share" for t in GDELT_TOPICS] + [f"{t}_avg_tone" for t in GDELT_TOPICS]
         table = window_mean_join(table, src["gdelt"], columns, lag_days=1)

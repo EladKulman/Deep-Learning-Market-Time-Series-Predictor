@@ -48,6 +48,7 @@ python scripts/fetch_sec_filings.py --start 2006-01-01         # sec_filings_dai
 python scripts/build_event_calendar.py                         # event_calendar_daily.csv (FOMC/CPI/NFP days, month-end window, opex; runs 120 days ahead)
 python scripts/build_daily_feature_table.py                    # daily_feature_table.csv + daily_feature_table_groups.json
 python scripts/audit_processed_data.py --leakage               # coverage, dead columns, same-day leakage check
+python scripts/validate_feature_table.py                       # 47 checks against known market history (crashes, inversions, release days, event-day |returns|)
 ```
 
 Notes:
@@ -223,7 +224,7 @@ One row per CBOE trading day from 2006. VIX OHLC plus `vxn_close` (Nasdaq-100 im
 Daily closes and log returns for TLT, HYG (from Apr 2007), SPY, IWM, SMH, GLD, WTI crude (`oil_`) and the dollar index (`dxy_`). The feature table uses TLT and HYG directly and turns SPY, IWM and SMH into relative returns against QQQ.
 
 ### I. Economic Policy Uncertainty (`epu_daily.csv`)
-Calendar-day `epu_daily` and `emu_daily` (Equity Market Uncertainty) from policyuncertainty.com, 2005 onward (source runs from 1985). Published the next morning; only the trailing month is revised.
+Calendar-day `epu_daily` and `emu_daily` (Equity Market Uncertainty) from policyuncertainty.com, 2005 onward (source runs from 1985). Published the next morning; only the trailing month is revised. In the feature table `epu_log` / `emu_log` are the log of the trailing 7-day mean (single weekend days are very noisy) and `epu_log_1d` / `emu_log_1d` the raw prior day.
 
 ### J. FOMC tone (`fomc_tone_daily.csv`)
 Sentence-level hawkish / dovish classification of every policy statement (168 statements, 2006-2026). Statement days carry `fomc_hawkish_share`, `fomc_dovish_share`, `fomc_net_hawkish`, `fomc_tone_change`; `fomc_net_hawkish_ewma` and `fomc_net_hawkish_last` are carried forward between meetings. Raw sentence labels are in `data/raw/fomc/fomc_sentence_labels.csv`.
