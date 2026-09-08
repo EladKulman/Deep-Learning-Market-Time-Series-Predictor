@@ -37,7 +37,7 @@ def process_qqq_prices(df: pd.DataFrame) -> pd.DataFrame:
     # yfinance column for adj close is usually 'Adj Close'. 
     # But `.history(auto_adjust=False)` returns 'Close' and 'Adj Close'
     if 'adj close' not in df.columns:
-        df['adj close'] = df['close'] # Fallback if missing
+        raise ValueError("Adjusted close is required for the total-return target")
         
     df = df.rename(columns={'adj close': 'adj_close'})
     df = df[['date', 'open', 'high', 'low', 'close', 'adj_close', 'volume']].copy()
@@ -82,16 +82,14 @@ def validate_data(df: pd.DataFrame, ticker: str):
     logging.info(f"Date range: {min_date} to {max_date}")
     
     # Warn for large missing periods (US trading days usually miss weekends and holidays, so >4 days is a warning)
-    df['date_parsed'] = pd.to_datetime(df['date'])
-    date_diffs = df['date_parsed'].diff().dt.days
+    date_diffs = pd.to_datetime(df['date']).diff().dt.days
     max_gap = date_diffs.max()
     if max_gap > 5:
         logging.warning(f"Large missing period detected! Max gap is {max_gap} days.")
-    df = df.drop(columns=['date_parsed'])
 
 def main():
     parser = argparse.ArgumentParser(description="Fetch and process QQQ prices")
-    parser.add_argument("--start", type=str, default="2006-01-01", help="Start date (YYYY-MM-DD)")
+    parser.add_argument("--start", type=str, default="2005-01-01", help="Source start date; include a year before modeling for rolling-feature warm-up")
     parser.add_argument("--end", type=str, default=None, help="End date (YYYY-MM-DD), default is today")
     parser.add_argument("--out-dir", type=str, default="data", help="Base output directory")
     args = parser.parse_args()

@@ -236,8 +236,8 @@
     "role": "past"
   },
   "ndx_earnings_count": {
-    "group": "calendar",
-    "role": "known_future"
+    "group": "sec",
+    "role": "past"
   },
   "sec_8k_count": {
     "group": "sec",

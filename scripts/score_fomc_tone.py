@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Score FOMC statements for hawkish / dovish tone with a purpose-trained classifier.
 
-Model: gtfintechlab/FOMC-RoBERTa (Shah, Paturi & Chava, ACL 2023), a sentence-level
-three-way classifier (dovish / hawkish / neutral) trained on labelled FOMC communication.
+Default model: LorenzoAleCon29/roberta-large-fomc-hawkish-dovish, a sentence-level
+three-way classifier. The gated gtfintechlab/FOMC-RoBERTa is an optional alternative.
 It replaces the six-word keyword counts used previously.
 
 Per statement we compute
@@ -31,6 +31,7 @@ from pathlib import Path
 
 import pandas as pd
 import torch
+from chronos_data import fingerprint
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -40,6 +41,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # --model-id gtfintechlab/FOMC-RoBERTa. The default below is an ungated RoBERTa-large
 # fine-tuned on the same hawkish/dovish FOMC sentence dataset with explicit labels.
 DEFAULT_MODEL_ID = "LorenzoAleCon29/roberta-large-fomc-hawkish-dovish"
+DEFAULT_REVISION = "f4759d4ad3f1182f81d87e47ba603261740d36cf"
 PROBES = {
     "hawkish": "In light of elevated inflation, the Committee decided to raise the target range for the federal funds rate.",
     "dovish": "The Committee decided to lower the target range for the federal funds rate to support the recovery.",
@@ -55,9 +57,9 @@ def split_sentences(text: str) -> list[str]:
     return [s for s in sentences if not any(marker in s.lower() for marker in BOILERPLATE)]
 
 
-def load_model(model_id: str, device: str):
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForSequenceClassification.from_pretrained(model_id).to(device).eval()
+def load_model(model_id: str, device: str, revision: str | None = None):
+    tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
+    model = AutoModelForSequenceClassification.from_pretrained(model_id, revision=revision).to(device).eval()
     labels = {int(k): v.lower() for k, v in model.config.id2label.items()}
     if not {"hawkish", "dovish"} <= set(labels.values()):
         raise SystemExit(f"{model_id} does not expose hawkish/dovish labels: {labels}")
@@ -82,12 +84,17 @@ def main() -> None:
     parser.add_argument("--start", default="2006-01-01")
     parser.add_argument("--end", default=None)
     parser.add_argument("--model-id", default=DEFAULT_MODEL_ID)
+    parser.add_argument("--model-revision", help="Model commit SHA; the default classifier uses the tested pinned revision")
     parser.add_argument("--device", default="mps" if torch.backends.mps.is_available() else "cpu")
     args = parser.parse_args()
 
+    end = args.end or pd.Timestamp.today().strftime("%Y-%m-%d")
     records = [json.loads(line) for line in args.input.read_text(encoding="utf-8").splitlines()]
-    records = sorted((r for r in records if r["date"] >= args.start), key=lambda r: r["date"])
-    tokenizer, model, labels = load_model(args.model_id, args.device)
+    records = sorted((r for r in records if args.start <= r["date"] <= end), key=lambda r: r["date"])
+    if not records:
+        raise ValueError("No statements in the requested range")
+    revision = args.model_revision or (DEFAULT_REVISION if args.model_id == DEFAULT_MODEL_ID else None)
+    tokenizer, model, labels = load_model(args.model_id, args.device, revision)
 
     probe_results = dict(zip(PROBES, classify(list(PROBES.values()), tokenizer, model, labels, args.device)))
     logging.info("Probe sentences -> %s", probe_results)
@@ -99,8 +106,7 @@ def main() -> None:
     for record in records:
         sentences = split_sentences(record["text"])
         if not sentences:
-            logging.warning("No sentences for %s", record["date"])
-            continue
+            raise ValueError(f"No sentences for {record['date']}; refusing incomplete scores")
         predicted = classify(sentences, tokenizer, model, labels, args.device)
         counts = pd.Series(predicted).value_counts()
         n = len(predicted)
@@ -116,17 +122,23 @@ def main() -> None:
     scores["fomc_net_hawkish_ewma"] = scores["fomc_net_hawkish"].ewm(halflife=3).mean()
 
     raw_dir = Path(args.out_dir) / "raw" / "fomc"
+    raw_dir.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(sentence_rows).to_csv(raw_dir / "fomc_sentence_labels.csv", index=False)
     scores.to_csv(raw_dir / "fomc_statement_scores.csv", index=False)
 
-    end = args.end or pd.Timestamp.today().strftime("%Y-%m-%d")
     daily = pd.DataFrame({"date": pd.date_range(args.start, end, freq="D").strftime("%Y-%m-%d")})
     daily = daily.merge(scores, on="date", how="left")
     daily["fomc_net_hawkish_ewma"] = daily["fomc_net_hawkish_ewma"].ffill()
     daily["fomc_net_hawkish_last"] = daily["fomc_net_hawkish"].ffill()
 
     path = Path(args.out_dir) / "processed" / "fomc_tone_daily.csv"
+    path.parent.mkdir(parents=True, exist_ok=True)
     daily.to_csv(path, index=False)
+    metadata = {"model_id": args.model_id, "model_revision": revision or getattr(model.config, "_commit_hash", None),
+                "input_sha256": fingerprint(args.input), "scores_sha256": fingerprint(raw_dir / "fomc_statement_scores.csv"),
+                "daily_sha256": fingerprint(path), "statement_count": len(scores), "start": args.start, "end": end,
+                "labels": labels, "probes": probe_results, "device": args.device}
+    path.with_suffix(".metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
     logging.info("Wrote %s (%d statements scored, %d days)", path, len(scores), len(daily))
 
 

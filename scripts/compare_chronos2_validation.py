@@ -9,24 +9,13 @@ from pathlib import Path
 from typing import Sequence
 
 import pandas as pd
+import numpy as np
+from statistics import NormalDist
+from chronos_data import add_feature_args, select_features, training_inputs, forecast_input, provenance
 
 
 DEFAULT_DATA = Path("data/processed/daily_feature_table.csv")
 DEFAULT_OUTPUT_DIR = Path("models/chronos2-validation-comparison")
-SMOKE_TEST_FEATURES = (
-    "return_5d",
-    "volatility_20d",
-    "volume_change_1d",
-    "dff",
-    "dgs10",
-    "dgs2",
-    "t10y2y",
-    "cpi_yoy",
-    "vix_close",
-    "is_fomc_day",
-    "days_since_fomc",
-    "sec_total_filings",
-)
 
 
 def parse_args() -> argparse.Namespace:
@@ -108,7 +97,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--feature-columns",
         default=None,
-        help="Optional comma-separated covariates. Defaults to numeric non-target columns.",
+        help="Optional comma-separated covariates; otherwise use the selected feature profile.",
     )
     parser.add_argument(
         "--exclude-columns",
@@ -117,7 +106,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--quantiles",
-        default="0.1,0.5,0.9",
+        default="0.01,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,0.99",
         help="Comma-separated quantile levels to evaluate.",
     )
     parser.add_argument(
@@ -171,6 +160,8 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Validate data, splits, windows, and feature selection without loading Chronos-2.",
     )
+    parser.add_argument("--base-only", action="store_true", help="Evaluate pretrained Chronos-2 and the Gaussian baseline without fine-tuning")
+    add_feature_args(parser)
     return parser.parse_args()
 
 
@@ -195,11 +186,6 @@ def apply_mode_defaults(args: argparse.Namespace) -> argparse.Namespace:
     return args
 
 
-def parse_column_list(raw_value: str | None) -> list[str] | None:
-    if raw_value is None:
-        return None
-    values = [value.strip() for value in raw_value.split(",") if value.strip()]
-    return values or None
 
 
 def parse_quantiles(raw_value: str) -> list[float]:
@@ -208,6 +194,8 @@ def parse_quantiles(raw_value: str) -> list[float]:
         raise ValueError("--quantiles must contain at least one value")
     if min(quantiles) <= 0 or max(quantiles) >= 1:
         raise ValueError("--quantiles must be strictly between 0 and 1")
+    if not all(np.isfinite(quantiles)) or quantiles != sorted(set(quantiles)) or 0.5 not in quantiles:
+        raise ValueError("--quantiles must be finite, unique, increasing, and include 0.5")
     return quantiles
 
 
@@ -228,31 +216,11 @@ def load_frame(
         raise ValueError(f"Missing required columns in {data_path}: {sorted(missing_columns)}")
 
     frame[timestamp_column] = pd.to_datetime(frame[timestamp_column], errors="coerce")
-    frame = frame.dropna(subset=[timestamp_column, target_column])
+    if frame[[timestamp_column, target_column]].isna().any().any():
+        raise ValueError("Invalid dates or missing targets would break the trading-session sequence")
     return frame.sort_values(timestamp_column).reset_index(drop=True)
 
 
-def resolve_feature_columns(
-    frame: pd.DataFrame,
-    target_column: str,
-    timestamp_column: str,
-    feature_columns: Sequence[str] | None,
-    exclude_columns: Sequence[str] | None,
-) -> list[str]:
-    if feature_columns is not None:
-        missing_columns = set(feature_columns) - set(frame.columns)
-        if missing_columns:
-            raise ValueError(f"Unknown feature columns: {sorted(missing_columns)}")
-        return list(feature_columns)
-
-    excluded = set(exclude_columns or [])
-    excluded.update({target_column, timestamp_column})
-    numeric_columns = [
-        column
-        for column in frame.columns
-        if column not in excluded and pd.api.types.is_numeric_dtype(frame[column])
-    ]
-    return [column for column in numeric_columns if not frame[column].isna().all()]
 
 
 def prepare_modeling_frame(
@@ -262,7 +230,7 @@ def prepare_modeling_frame(
     feature_columns: Sequence[str],
     max_rows: int | None,
 ) -> pd.DataFrame:
-    frame = frame.dropna(subset=[timestamp_column, target_column, *feature_columns]).copy()
+    frame = frame.copy()  # Missing covariates are masked, never used to remove trading days.
     frame = frame.sort_values(timestamp_column).reset_index(drop=True)
     if max_rows is not None:
         frame = frame.tail(max_rows).reset_index(drop=True)
@@ -297,6 +265,7 @@ def build_validation_windows(
     timestamp_column: str,
     target_column: str,
     feature_columns: Sequence[str],
+    known_covariates_names: Sequence[str] = (),
 ) -> tuple[list[dict], pd.DataFrame]:
     if stride <= 0:
         raise ValueError("--stride must be positive")
@@ -313,15 +282,7 @@ def build_validation_windows(
             context = context.tail(max_context_rows).copy()
 
         actual = frame.iloc[origin : origin + prediction_length].copy()
-        inputs.append(
-            {
-                "target": context[target_column].to_numpy(dtype="float32"),
-                "past_covariates": {
-                    column: context[column].to_numpy(dtype="float32")
-                    for column in feature_columns
-                },
-            }
-        )
+        inputs.append(forecast_input(context, actual, target_column, feature_columns, known_covariates_names))
 
         for horizon_index, (_, row) in enumerate(actual.iterrows(), start=1):
             actual_rows.append(
@@ -329,6 +290,7 @@ def build_validation_windows(
                     "window": window_index,
                     "horizon": horizon_index,
                     "date": row[timestamp_column],
+                    "forecast_origin": context[timestamp_column].iloc[-1],
                     "actual": row[target_column],
                 }
             )
@@ -349,18 +311,10 @@ def to_chronos_training_inputs(
     timestamp_column: str,
     feature_columns: Sequence[str],
     prediction_length: int,
+    known_covariates_names: Sequence[str] = (),
 ):
-    from chronos.chronos2.preprocess import from_data_frame
-
-    train_frame = frame[[timestamp_column, target_column, *feature_columns]].copy()
-    train_frame["item_id"] = "QQQ"
-    return from_data_frame(
-        train_frame,
-        target_columns=[target_column],
-        prediction_length=prediction_length,
-        id_column="item_id",
-        timestamp_column=timestamp_column,
-    )
+    return training_inputs(frame, target_column, timestamp_column, feature_columns,
+                           known_covariates_names, prediction_length)
 
 
 def predict_validation_windows(
@@ -383,7 +337,7 @@ def predict_validation_windows(
 
     prediction_rows = []
     for window_index, prediction in enumerate(quantiles):
-        quantile_values = prediction[0].numpy()
+        quantile_values = prediction[0].detach().cpu().numpy()
         for horizon_index in range(prediction_length):
             row = {
                 "model": model_name,
@@ -397,6 +351,22 @@ def predict_validation_windows(
 
     predictions = pd.DataFrame(prediction_rows)
     result = predictions.merge(actuals, on=["window", "horizon"], how="left", validate="one_to_one")
+    return add_errors(result)
+
+
+def gaussian_baseline(inputs, actuals, quantile_levels) -> pd.DataFrame:
+    result = actuals.copy()
+    result["model"] = "zero_gaussian"
+    # One-day returns at each horizon: no sqrt(h) cumulative-return scaling.
+    vol = {i: float(np.nanstd(x["target"][-60:], ddof=1)) for i, x in enumerate(inputs)}
+    sigma = result["window"].map(vol)
+    for q in quantile_levels:
+        result[f"q{q:g}"] = sigma * NormalDist().inv_cdf(q)
+    result["prediction"] = 0.0
+    return add_errors(result)
+
+
+def add_errors(result: pd.DataFrame) -> pd.DataFrame:
     result["error"] = result["prediction"] - result["actual"]
     result["abs_error"] = result["error"].abs()
     result["squared_error"] = result["error"] ** 2
@@ -435,6 +405,17 @@ def metric_row(model_name: str, horizon, group: pd.DataFrame) -> dict:
     if "interval_coverage" in group.columns:
         row["q10_q90_coverage"] = group["interval_coverage"].mean()
         row["q10_q90_mean_width"] = group["interval_width"].mean()
+    qcols = [c for c in group if c.startswith("q") and c[1:].replace(".", "", 1).isdigit()]
+    losses = []
+    for column in qcols:
+        error = group["actual"] - group[column]
+        q = float(column[1:])
+        losses.append(np.maximum(q * error, (q - 1) * error).to_numpy())
+    row["mean_pinball_loss"] = float(np.mean(losses))
+    denominator = group["actual"].abs().mean()
+    row["weighted_quantile_loss"] = 2 * row["mean_pinball_loss"] / denominator if denominator else np.nan
+    if "q0.01" in group and "q0.99" in group:
+        row["q01_q99_coverage"] = ((group.actual >= group["q0.01"]) & (group.actual <= group["q0.99"])).mean()
     return row
 
 
@@ -446,6 +427,9 @@ def write_metadata(
     num_windows: int,
 ) -> None:
     metadata = {
+        **provenance(args, feature_columns, args.known_covariates_names),
+        "base_only": args.base_only,
+        "quantiles": parse_quantiles(args.quantiles),
         "model_id": args.model_id,
         "target_column": args.target_column,
         "feature_columns": list(feature_columns),
@@ -500,22 +484,10 @@ def print_plan(
 
 def main() -> None:
     args = apply_mode_defaults(parse_args())
-    requested_features = parse_column_list(args.feature_columns)
-    excluded_features = parse_column_list(args.exclude_columns)
     quantile_levels = parse_quantiles(args.quantiles)
 
     raw_frame = load_frame(args.data, args.timestamp_column, args.target_column)
-    if args.smoke_test and requested_features is None:
-        requested_features = [column for column in SMOKE_TEST_FEATURES if column in raw_frame.columns]
-    feature_columns = resolve_feature_columns(
-        frame=raw_frame,
-        target_column=args.target_column,
-        timestamp_column=args.timestamp_column,
-        feature_columns=requested_features,
-        exclude_columns=excluded_features,
-    )
-    if not feature_columns:
-        raise ValueError("No usable numeric covariate columns were selected.")
+    feature_columns, args.known_covariates_names = select_features(raw_frame, args)
 
     frame = prepare_modeling_frame(
         frame=raw_frame,
@@ -539,6 +511,7 @@ def main() -> None:
         timestamp_column=args.timestamp_column,
         target_column=args.target_column,
         feature_columns=feature_columns,
+        known_covariates_names=args.known_covariates_names,
     )
     print_plan(args, feature_columns, train_frame, validation_frame, len(validation_inputs))
     if args.prepare_only:
@@ -546,9 +519,12 @@ def main() -> None:
         return
 
     from chronos import Chronos2Pipeline
+    from transformers import set_seed
+    set_seed(args.seed)
 
     print("Loading base Chronos-2 pipeline...")
-    base_pipeline = Chronos2Pipeline.from_pretrained(args.model_id, device_map=args.device_map)
+    base_pipeline = Chronos2Pipeline.from_pretrained(args.model_id, device_map=args.device_map, revision=args.model_revision)
+    args.model_revision = args.model_revision or getattr(base_pipeline.model.config, "_commit_hash", None)
 
     print("Validating base pretrained model...")
     base_predictions = predict_validation_windows(
@@ -562,6 +538,25 @@ def main() -> None:
         context_length=args.context_length,
     )
 
+    predictions = [base_predictions, gaussian_baseline(validation_inputs, actuals, quantile_levels)]
+    if not args.base_only:
+        predictions.append(fine_tuned_predictions(base_pipeline, args, train_frame, feature_columns,
+                                                 validation_inputs, actuals, quantile_levels))
+    all_predictions = pd.concat(predictions, ignore_index=True)
+    metrics = summarize_metrics(all_predictions)
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    write_metadata(args, feature_columns, train_frame, validation_frame, len(validation_inputs))
+    predictions_path = args.output_dir / "validation_predictions.csv"
+    metrics_path = args.output_dir / "validation_metrics.csv"
+    all_predictions.to_csv(predictions_path, index=False)
+    metrics.to_csv(metrics_path, index=False)
+    print(f"Wrote validation predictions to {predictions_path}")
+    print(f"Wrote comparison metrics to {metrics_path}")
+    print(metrics.to_string(index=False))
+
+
+def fine_tuned_predictions(base_pipeline, args, train_frame, feature_columns, validation_inputs, actuals, quantile_levels):
     print("Fine-tuning on train split...")
     train_inputs = to_chronos_training_inputs(
         frame=train_frame,
@@ -569,6 +564,7 @@ def main() -> None:
         timestamp_column=args.timestamp_column,
         feature_columns=feature_columns,
         prediction_length=args.prediction_length,
+        known_covariates_names=args.known_covariates_names,
     )
     finetuned_pipeline = base_pipeline.fit(
         inputs=train_inputs,
@@ -581,10 +577,18 @@ def main() -> None:
         min_past=args.min_past,
         output_dir=args.output_dir / "finetuned",
         remove_printer_callback=True,
+        seed=args.seed,
+        report_to="none",
     )
 
     print("Validating fine-tuned model on the same windows...")
-    finetuned_predictions = predict_validation_windows(
+    # Keep enough metadata beside the adapter for the standalone prediction script.
+    from fine_tune_chronos2 import write_metadata as write_fine_tuning_metadata
+    from copy import copy
+    training_args = copy(args)
+    training_args.batch_size = args.train_batch_size
+    write_fine_tuning_metadata(args.output_dir / "finetuned", training_args, feature_columns, train_frame, None)
+    return predict_validation_windows(
         pipeline=finetuned_pipeline,
         inputs=validation_inputs,
         actuals=actuals,
@@ -594,21 +598,6 @@ def main() -> None:
         batch_size=args.eval_batch_size,
         context_length=args.context_length,
     )
-
-    all_predictions = pd.concat([base_predictions, finetuned_predictions], ignore_index=True)
-    metrics = summarize_metrics(all_predictions)
-
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    write_metadata(args, feature_columns, train_frame, validation_frame, len(validation_inputs))
-    predictions_path = args.output_dir / "validation_predictions.csv"
-    metrics_path = args.output_dir / "validation_metrics.csv"
-    all_predictions.to_csv(predictions_path, index=False)
-    metrics.to_csv(metrics_path, index=False)
-
-    print(f"Wrote validation predictions to {predictions_path}")
-    print(f"Wrote comparison metrics to {metrics_path}")
-    print(metrics.to_string(index=False))
-
 
 if __name__ == "__main__":
     main()

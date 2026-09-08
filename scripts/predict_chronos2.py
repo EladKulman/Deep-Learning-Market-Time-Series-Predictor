@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Sequence
 
 import pandas as pd
+import pandas_market_calendars as mcal
+from chronos_data import add_feature_args, select_features, forecast_input
 
 
 DEFAULT_CHECKPOINT = Path("models/chronos2-qqq-smoke/finetuned-ckpt")
@@ -103,6 +105,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Validate inputs and print the forecast plan without loading Chronos-2.",
     )
+    parser.add_argument("--pretrained", action="store_true", help="Forecast with the base model instead of loading a checkpoint")
+    parser.add_argument("--model-id", default="amazon/chronos-2")
+    parser.add_argument("--calendar", type=Path, default=Path("data/processed/event_calendar_daily.csv"))
+    parser.add_argument("--exclude-columns", default="open,high,low,close,adj_close,volume,return_1d")
+    add_feature_args(parser)
     return parser.parse_args()
 
 
@@ -158,7 +165,8 @@ def load_frame(
         raise ValueError(f"Missing columns in {data_path}: {sorted(missing_columns)}")
 
     frame[timestamp_column] = pd.to_datetime(frame[timestamp_column], errors="coerce")
-    frame = frame.dropna(subset=[timestamp_column, target_column, *feature_columns])
+    if frame[[timestamp_column, target_column]].isna().any().any():
+        raise ValueError("Invalid dates or missing targets would break the trading-session sequence")
     return frame.sort_values(timestamp_column).reset_index(drop=True)
 
 
@@ -195,16 +203,10 @@ def make_chronos_input(
     context: pd.DataFrame,
     target_column: str,
     feature_columns: Sequence[str],
+    future: pd.DataFrame | None = None,
+    known_covariates_names: Sequence[str] = (),
 ) -> list[dict]:
-    return [
-        {
-            "target": context[target_column].to_numpy(dtype="float32"),
-            "past_covariates": {
-                column: context[column].to_numpy(dtype="float32")
-                for column in feature_columns
-            },
-        }
-    ]
+    return [forecast_input(context, future, target_column, feature_columns, known_covariates_names)]
 
 
 def make_forecast_dates(
@@ -218,14 +220,11 @@ def make_forecast_dates(
         return actuals[timestamp_column].reset_index(drop=True)
 
     last_timestamp = context[timestamp_column].max()
-    offset = pd.tseries.frequencies.to_offset(date_freq)
-    return pd.Series(
-        pd.date_range(
-            start=last_timestamp + offset,
-            periods=prediction_length,
-            freq=date_freq,
-        )
-    )
+    if date_freq != "B":
+        raise ValueError("QQQ forecasts use NYSE sessions; --date-freq overrides are unsupported")
+    days = mcal.get_calendar("NYSE").schedule(start_date=last_timestamp + pd.Timedelta(days=1),
+        end_date=last_timestamp + pd.Timedelta(days=prediction_length * 3 + 30)).index
+    return pd.Series(days[:prediction_length])
 
 
 def build_forecast_frame(
@@ -235,7 +234,7 @@ def build_forecast_frame(
     target_column: str,
     actuals: pd.DataFrame | None,
 ) -> pd.DataFrame:
-    quantile_values = predictions[0][0].numpy()
+    quantile_values = predictions[0][0].detach().cpu().numpy()
     result = pd.DataFrame(
         {
             "date": forecast_dates.dt.strftime("%Y-%m-%d"),
@@ -268,7 +267,7 @@ def print_plan(
     actuals: pd.DataFrame | None,
 ) -> None:
     print("Chronos-2 prediction plan")
-    print(f"  checkpoint: {args.checkpoint}")
+    print(f"  model: {args.model_id if args.pretrained else args.checkpoint}")
     print(f"  output: {args.output}")
     print(f"  target: {target_column}")
     print(f"  features: {len(feature_columns)}")
@@ -281,24 +280,27 @@ def print_plan(
 
 def main() -> None:
     args = parse_args()
-    metadata = load_metadata(args.checkpoint)
+    metadata = {} if args.pretrained else load_metadata(args.checkpoint)
+    if not args.pretrained and metadata.get("schema_version") != 2:
+        raise ValueError("Checkpoint uses the old data schema or has no metadata. Retrain on the corrected table, or use --pretrained.")
+    adapter_path = args.checkpoint / "adapter_config.json"
+    if not args.pretrained and adapter_path.exists() and metadata.get("model_revision"):
+        adapter = json.loads(adapter_path.read_text())
+        if adapter.get("revision") != metadata["model_revision"]:
+            raise ValueError("Adapter base revision differs from its training metadata; pin adapter_config.json before offline reload")
     target_column = args.target_column or metadata.get("target_column", "log_return_1d")
-    feature_columns = parse_list(args.feature_columns) or metadata.get("feature_columns")
-    if not feature_columns:
-        raise ValueError(
-            "No feature columns were provided and no fine_tuning_metadata.json was found."
-        )
+    args.target_column = target_column
+    if not args.pretrained and args.feature_columns is None:
+        args.feature_columns = ",".join(metadata["feature_columns"]) or "none"
+    frame = load_frame(args.data, args.timestamp_column, target_column, [])
+    feature_columns, known_covariates_names = select_features(frame, args)
+    if not args.pretrained and (feature_columns != metadata["feature_columns"] or known_covariates_names != metadata["known_covariates_names"]):
+        raise ValueError("Selected feature names/roles differ from the checkpoint's training schema")
 
     prediction_length = args.prediction_length or metadata.get("prediction_length", 3)
     context_length = args.context_length or metadata.get("context_length")
     quantile_levels = parse_quantiles(args.quantiles)
 
-    frame = load_frame(
-        data_path=args.data,
-        timestamp_column=args.timestamp_column,
-        target_column=target_column,
-        feature_columns=feature_columns,
-    )
     context, actuals = split_context_and_actuals(
         frame=frame,
         holdout_rows=args.holdout_rows,
@@ -314,26 +316,29 @@ def main() -> None:
         context=context,
         actuals=actuals,
     )
+    forecast_dates = make_forecast_dates(context, actuals, args.timestamp_column, prediction_length, args.date_freq)
+    if actuals is not None:
+        future = actuals
+    else:
+        calendar = pd.read_csv(args.calendar, parse_dates=["date"]).set_index("date") if known_covariates_names else pd.DataFrame()
+        future = calendar.reindex(forecast_dates)
+    inputs = make_chronos_input(context, target_column, feature_columns, future, known_covariates_names)
+    print(f"  known_future_features: {len(known_covariates_names)}")
+    print(f"  forecast_dates: {[str(d.date()) for d in forecast_dates]}")
     if args.prepare_only:
         print("Prepare-only check completed; Chronos-2 was not loaded.")
         return
 
     from chronos import Chronos2Pipeline
 
-    pipeline = Chronos2Pipeline.from_pretrained(args.checkpoint, device_map=args.device_map)
+    pipeline = Chronos2Pipeline.from_pretrained(args.model_id if args.pretrained else args.checkpoint,
+        device_map=args.device_map, **({"revision": args.model_revision} if args.pretrained else {}))
     quantiles, _ = pipeline.predict_quantiles(
-        inputs=make_chronos_input(context, target_column, feature_columns),
+        inputs=inputs,
         prediction_length=prediction_length,
         quantile_levels=quantile_levels,
         batch_size=args.batch_size,
         context_length=context_length,
-    )
-    forecast_dates = make_forecast_dates(
-        context=context,
-        actuals=actuals,
-        timestamp_column=args.timestamp_column,
-        prediction_length=prediction_length,
-        date_freq=args.date_freq,
     )
     forecast = build_forecast_frame(
         forecast_dates=forecast_dates,

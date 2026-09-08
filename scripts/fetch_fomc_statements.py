@@ -7,11 +7,10 @@ The previous scraper required the word "statement" in the link text, which the c
 Fed calendar page no longer uses, and it only matched the post-2011 URL pattern. The
 result was one statement per year after 2020 and nothing before 2011.
 
-This version collects every monetary press-release link from the calendar pages by URL
-pattern (both `/newsevents/pressreleases/monetaryYYYYMMDDa.htm` and the older
-`/newsevents/press/monetary/YYYYMMDDa.htm`), keeps the "a" release (the policy statement),
-and verifies the text mentions the federal funds rate so that non-policy releases such as
-the Statement on Longer-Run Goals are excluded.
+Collect statement links in both old and new URL formats, including policy releases
+with a 'b' suffix. Verify the text describes the Committee's federal funds rate policy.
+Use the printed release date when a historical URL contains a typo. Cache exclusions
+as well as policy statements so offline replay never silently drops an unknown link.
 
 Outputs
 -------
@@ -36,6 +35,7 @@ from pathlib import Path
 
 import pandas as pd
 import requests
+from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -111,27 +111,42 @@ def get(url: str) -> str:
     return resp.text
 
 
-def collect_statement_links() -> dict[str, str]:
-    """Return {date: url} for every 'a' monetary press release on the calendar pages."""
+def collect_statement_links(cache_dir: Path | None = None, cached: bool = False) -> dict[str, str]:
+    """Collect statement links regardless of URL suffix; some policy releases use 'b'."""
     links: dict[str, str] = {}
     for path in CALENDAR_URLS:
         url = BASE_URL + path
-        try:
-            html = get(url)
-        except requests.RequestException as exc:
-            logging.warning("Failed to fetch %s: %s", url, exc)
-            continue
+        cache_path = None if cache_dir is None else cache_dir / Path(path).name
+        if cached:
+            if cache_path is None or not cache_path.exists():
+                raise FileNotFoundError(cache_path)
+            html = cache_path.read_text()
+        else:
+            html = get(url)  # Fail instead of silently publishing an incomplete inventory.
+            if cache_path is not None:
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+                cache_path.write_text(html)
         found = 0
-        for pattern in LINK_PATTERNS:
-            for href, ymd, suffix in pattern.findall(html):
-                if suffix != "a":
+        for anchor in BeautifulSoup(html, "html.parser").find_all("a", href=True):
+            if anchor.get_text(" ", strip=True) not in {"Statement", "HTML"}:
+                continue
+            for pattern in LINK_PATTERNS:
+                match = pattern.search(f'href="{anchor["href"]}"')
+                if not match:
                     continue
+                href, ymd, suffix = match.groups()
                 date = f"{ymd[:4]}-{ymd[4:6]}-{ymd[6:8]}"
                 links.setdefault(date, BASE_URL + href)
                 found += 1
         logging.info("%s: %d statement links", path, found)
         time.sleep(0.3)
     return dict(sorted(links.items()))
+
+
+def release_date(text: str, fallback: str) -> str:
+    """The printed release date wins over a typo in a URL (e.g. June 28, 2007)."""
+    match = re.search(r"\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\b", text[:300])
+    return pd.Timestamp(match.group()).strftime("%Y-%m-%d") if match else fallback
 
 
 def is_policy_statement(text: str) -> bool:
@@ -153,29 +168,42 @@ def count_keywords(text: str, keywords: list[str]) -> int:
     return sum(lowered.count(kw) for kw in keywords)
 
 
-def fetch_statements(links: dict[str, str], cache_path: Path, refresh: bool) -> list[dict]:
+def fetch_statements(links: dict[str, str], cache_path: Path, refresh: bool, cached_only: bool = False) -> list[dict]:
+    if cached_only and refresh:
+        raise ValueError("--cached and --refresh cannot be combined")
     cached: dict[str, dict] = {}
+    rejected_path = cache_path.with_name("fomc_nonpolicy_releases.json")
+    rejected = json.loads(rejected_path.read_text()) if rejected_path.exists() and not refresh else {}
     if cache_path.exists() and not refresh:
         for line in cache_path.read_text(encoding="utf-8").splitlines():
             record = json.loads(line)
-            cached[record["date"]] = record
+            cached[record["url"]] = record
 
     records: list[dict] = []
     for date, url in links.items():
-        if date in cached and cached[date].get("text"):
-            records.append(cached[date])
+        if url in rejected:
             continue
-        try:
-            html = get(url)
-        except requests.RequestException as exc:
-            logging.warning("Failed %s: %s", url, exc)
+        if url in cached and cached[url].get("text"):
+            record = cached[url].copy()
+            record["date"] = release_date(record["text"], date)
+            record["title"] = f"FOMC Statement {record['date']}"
+            records.append(record)
             continue
+        if cached_only:
+            raise ValueError(f"Statement not cached: {url}")
+        html = get(url)  # A failed request must not replace the inventory with a partial one.
         parser = ArticleText()
         parser.feed(html)
         text = parser.text()
         if not is_policy_statement(text):
+            if len(text) < 100:
+                raise ValueError(f"No article text parsed from {url}")
+            rejected[url] = {"date": release_date(text, date), "text": text,
+                             "reason": "Does not satisfy is_policy_statement"}
+            rejected_path.write_text(json.dumps(rejected, indent=2) + "\n")
             logging.info("Skipping non-policy release %s (%s)", date, url)
             continue
+        date = release_date(text, date)
         records.append({"date": date, "title": f"FOMC Statement {date}", "url": url, "text": text})
         logging.info("Fetched statement %s (%d chars)", date, len(text))
         time.sleep(0.5)
@@ -214,6 +242,7 @@ def main() -> None:
     parser.add_argument("--end", default=None)
     parser.add_argument("--out-dir", default="data")
     parser.add_argument("--refresh", action="store_true", help="Re-download statements already cached")
+    parser.add_argument("--cached", action="store_true", help="Rebuild entirely from the saved calendars and statements")
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir)
@@ -222,9 +251,9 @@ def main() -> None:
     raw_dir.mkdir(parents=True, exist_ok=True)
     proc_dir.mkdir(parents=True, exist_ok=True)
 
-    links = collect_statement_links()
+    links = collect_statement_links(out_dir / "raw" / "calendar", args.cached)
     logging.info("Found %d candidate statement links (%s -> %s)", len(links), min(links), max(links))
-    records = fetch_statements(links, raw_dir / "fomc_statements_raw.jsonl", args.refresh)
+    records = fetch_statements(links, raw_dir / "fomc_statements_raw.jsonl", args.refresh, args.cached)
     records = [r for r in records if r["date"] >= args.start]
     if not records:
         raise SystemExit("No FOMC statements fetched")

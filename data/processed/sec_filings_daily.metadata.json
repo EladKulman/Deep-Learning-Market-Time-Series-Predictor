@@ -1,0 +1,8 @@
+{
+  "alignment": "first_nyse_close_after_acceptance",
+  "timestamp_timezone": "UTC",
+  "unknown_timestamp_rule": "next session after filing date",
+  "earnings_role": "past",
+  "end": "2026-09-07",
+  "missing_acceptance_timestamps": 0
+}

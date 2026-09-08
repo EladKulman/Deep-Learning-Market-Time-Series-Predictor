@@ -8,8 +8,8 @@ Run after any fetch or rebuild:
 
 The leakage check regresses each covariate in the feature table on the *same-day* QQQ log
 return. A covariate is allowed to correlate with today's return if it is measured at the
-close (VXN, TLT). A high fit for something that should only be known the next day (a
-FRED yield, a news count) means a timestamp is off by one.
+close (QQQ and TLT). Strong correlation in delayed features deserves investigation;
+this diagnostic alone cannot prove or disprove look-ahead leakage.
 """
 
 from __future__ import annotations
@@ -20,10 +20,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-SAME_DAY_OK = {"overnight_gap", "parkinson_vol_1d", "qqq_minus_spy", "smh_minus_qqq", "iwm_minus_spy", "vxn_log_chg",
-               "vxn_minus_vix", "vix_term_ratio", "vix9d_ratio", "vvix_log_chg", "tlt_log_ret", "hyg_log_ret",
-               "gld_log_ret", "oil_log_ret", "dxy_log_ret", "d_dfii10_bp", "d_t5yie_bp", "volume_z_20d", "volume_change_1d",
-               "mom_21d", "mom_63d", "dist_50dma", "dist_200dma", "volatility_20d", "parkinson_vol_22d", "vxn_close"}
+SAME_DAY_OK = {"overnight_gap", "parkinson_vol_1d", "qqq_minus_spy", "smh_minus_qqq", "iwm_minus_spy",
+               "tlt_log_ret", "hyg_log_ret", "gld_log_ret", "volume_z_20d", "volume_change_1d",
+               "mom_21d", "mom_63d", "dist_50dma", "dist_200dma", "volatility_20d", "parkinson_vol_22d"}
 
 
 def audit_file(path: Path) -> None:

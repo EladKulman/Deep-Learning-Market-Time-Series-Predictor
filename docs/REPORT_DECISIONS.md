@@ -8,6 +8,8 @@ Group 13: Tom Weitman, Elad Kulman. Workshop on Deep Learning.
 Companion documents: `docs/DATA_NOTES.md` (data conventions) and the covariate research
 brief (published 2026-09-07; source notes in the session that produced it).
 
+The literature summaries below are inherited from the research brief; the September 8 engineering audit did not independently verify every citation or empirical claim.
+
 ---
 
 ## 1. Framing
@@ -26,7 +28,7 @@ direction would fail on its own terms. A project that asks whether news tells th
 which narratives move the market.
 
 **Write.** State the negative prior explicitly in the introduction and position the
-contribution as (a) a leak-free, publication-aware feature table, (b) a covariate ablation
+contribution as (a) a publication-aware feature table with explicit vintage limitations, (b) a covariate ablation
 ladder that ranks feature groups, and (c) event-conditioned calibration analysis.
 
 ### 1.2 Departures from the proposal
@@ -44,7 +46,7 @@ expect it and it shows the reasoning matured.
 
 ## 2. Target and horizon
 **Decision.** Target is the one-day log return of QQQ, forecast 1 to 5 trading days ahead,
-on NYSE trading days from 2006-01-04 to the present (5,200 rows as of 2026-09-04).
+on NYSE trading days from 2006-01-03 to the present (5,201 rows as of 2026-09-04; 2005 price history supplies warm-up).
 
 **Why.** Log returns are the standard stationary target; a 1 to 5 day horizon matches the
 proposal's "next week" and Chronos-2's direct multi-step output. QQQ's own history starts in
@@ -61,11 +63,11 @@ in the methodology section; they justify choices an examiner will otherwise ques
 | Model fact | Data decision |
 |---|---|
 | Missing values are handled by an observation mask; the model standardizes over observed points and zero-fills *in standardized space* | **Never zero-fill.** Empty means unknown. Pre-2017 GDELT and outage days are NaN, not 0. (The original pipeline zero-filled; this was reversed.) |
-| Each covariate becomes an extra series in the target's attention group; pretraining groups were small | **Target 10 to 20 past-only covariates per run and ablate.** The full table has 54 so groups can be swapped in and out; the `core` profile has about 20. |
+| Each covariate becomes an extra series in the target's attention group; pretraining groups were small | **Target 10 to 20 past-only covariates per run and ablate.** The full table has 55 past features so groups can be swapped in and out; the `core` profile has 21. |
 | Every series is standardized over its own context window and passed through asinh | **Difference drifting levels** (rates, spreads, volatility indices, prices); keep bounded ratios, trailing z-scores and regime levels. |
-| Known-future covariates are supported natively and are the strongest documented channel | **Build a calendar of scheduled events** (FOMC, CPI, NFP, earnings, month-end, opex) and pass it through `known_covariates_names`. |
-| `predict_df` requires regularly spaced timestamps | Pass `freq="B"` or reindex; trading-day gaps otherwise raise. |
-| Fine-tuning on a single short series may not beat zero-shot (official guidance) | Zero-shot is rung 0 of the ladder and every fine-tuned run must beat it. Pin `chronos-forecasting>=2.3.1` (v2.1.0 fixed a past-covariate masking bug). |
+| Known-future covariates are supported natively and are the strongest documented channel | **Build a calendar of scheduled events** (scheduled FOMC, CPI, NFP, month-end, opex) and pass it through `known_covariates_names`. |
+| `predict_df` requires regularly spaced timestamps | Use array-based prediction inputs and generate forecast dates from the NYSE calendar; do not invent holiday rows. |
+| Fine-tuning on a single short series may not beat zero-shot (official guidance) | Zero-shot is rung 0 of the ladder and every fine-tuned run must beat it. Use tested `chronos-forecasting==2.3.1` and record exact runtime versions (v2.1.0 fixed a past-covariate masking bug). |
 
 ---
 
@@ -75,18 +77,18 @@ in the methodology section; they justify choices an examiner will otherwise ques
 - **QQQ OHLCV** (yfinance) and derived features. Raw price levels are no longer model inputs; instead: overnight gap, Parkinson range volatility (1-day and 22-day), 20-day volume z-score, 21/63-day momentum, distance to 50/200-day averages. `return_1d` and `return_5d` were dropped as linear duplicates of the target.
 - **FRED rates**: fed funds, 2y, 10y, 10y-2y. Entered as one-day basis-point changes plus the lagged slope level. 10y level dropped (slope = 10y - 2y exactly).
 - **CPI**: rebuilt from ALFRED release vintages (see section 5).
-- **FOMC statements**: scraper rewritten (94 to 168 statements); keyword counts superseded by a classifier (section 6).
-- **SEC filings**: rebuilt with full history from 2006, foreign-issuer forms for TSMC, and an earnings calendar from 8-K Item 2.02.
+- **FOMC statements**: scraper rewritten (94 to 168, then 170 after the September 8 suffix/date audit); keyword counts superseded by a classifier (section 6).
+- **SEC filings**: rebuilt with full history from 2006, foreign-issuer forms for TSMC, and past earnings-event counts from 8-K Item 2.02.
 - **GDELT**: kept from 2017 (API limit) with share-of-coverage normalization; outages left empty.
 
 ### 4.2 Added
 | Source | Why it earned a place | Availability |
 |---|---|---|
 | **Daily Economic Policy Uncertainty and Equity Market Uncertainty** (Baker-Bloom-Davis, policyuncertainty.com, CC BY 4.0) | Longest free daily uncertainty series (1985); improves 1-day-ahead S&P realized-volatility forecasts (Liu & Zhang 2015); only trailing 30 days revised (verified by diffing vintages) | T+1 morning |
-| **VXN** (Nasdaq-100 implied vol) and **VIX/VIX3M** term-structure ratio (CBOE) | VXN is the index-specific fear gauge; the term-structure slope is a documented short-horizon signal (Johnson 2017 JFQA) | same evening |
+| **VXN** (Nasdaq-100 implied vol) and **VIX/VIX3M** term-structure ratio (CBOE) | VXN is the index-specific fear gauge; the term-structure slope is a documented short-horizon signal (Johnson 2017 JFQA) | one-day conservative lag at the 16:00 ET cutoff |
 | **TLT and HYG returns** | Stock-bond correlation regime and same-day credit; FRED's spread series post a day later | close |
 | **Relative returns** QQQ-SPY, IWM-SPY, SMH-QQQ | Raw SPY is a near-duplicate of QQQ (corr ~0.95); the spreads carry growth, size and semiconductor tilts | close |
-| **Real yield (DFII10) and 5y breakeven (T5YIE)** | Real-yield shocks are the cleanest macro driver of long-duration growth stocks post-2020; Treasury-sourced so same-day on FRED | same afternoon |
+| **Real yield (DFII10) and 5y breakeven (T5YIE)** | Real-yield shocks are the cleanest macro driver of long-duration growth stocks post-2020; source timestamps must precede the forecast origin | H.15 publication rule for DFII10; post-close Treasury-sourced spread rule for T5YIE |
 | **Scheduled-event calendar** | Known-future channel; 11.4 bp average return on CPI/NFP/FOMC days vs 1.1 bp otherwise (Savor & Wilson 2013); pre-FOMC drift (Lucca & Moench 2015); turn-of-month (McConnell & Xu 2008); opex weeks (Stivers & Sun 2013) | known in advance |
 | **Fed tone classifier** | Purpose-trained hawkish/dovish sentence model replaces a six-word list | 14:00 ET same day |
 
@@ -117,16 +119,18 @@ T's 16:00 ET close, not by its reference date. Concretely:
 | Series | Rule applied |
 |---|---|
 | CPI | ALFRED vintages: the value on day T is the one published on or before T; year-over-year computed within that vintage. The original pipeline forward-filled by reference month, which exposed each CPI print about six weeks early (July CPI is dated 07-01 but published ~08-12). |
-| FRED H.15 rates (DFF, DGS2, DGS10, T10Y2Y) | Posted at 16:15 ET the *next* day: lagged one day. |
+| FRED H.15 (DFF, DGS2, DGS10, DFII10) | Next federal business day at 16:15 ET: use the first NYSE close after publication, not merely T+1 calendar day. |
+| T10Y2Y/T5YIE spreads | H.15 timing before June 21, 2019; same-evening Treasury sourcing thereafter, available next NYSE session. |
 | Calendar-day news counts (EPU, GDELT) | Complete only after midnight: value dated T-1; weekend days roll into Monday as a mean. |
 | Releases at or after 14:00 ET (FOMC statement) | Before the close, so day-T flag is legitimate for a close-to-close target. |
-| Post-market earnings 8-Ks | Attached to T+1; pre-market to T (EDGAR acceptance timestamp). |
-| Known-future flags | Only events on a published schedule before T (FOMC, CPI, NFP, earnings dates, calendar structure). |
+| All SEC filings | Parse UTC acceptance times and assign to the first NYSE close strictly after acceptance, including early closes. Earnings counts are past-only. |
+| CBOE indices, oil, dollar bars | One-day conservative lag; CBOE daily finalization may extend beyond the origin cutoff. |
+| Known-future flags | Only events on a published schedule before T (scheduled FOMC, CPI, NFP, calendar structure); historical schedules are reconstructed, not a full vintage archive. |
 
 **Evidence to cite.** `scripts/audit_processed_data.py --leakage` regresses each covariate on
 the same-day return: no next-day-only column explains more than 2% of today's return, while
-close-measured series (VXN change 54%, HYG 36%, overnight gap 35%) correlate as they should.
-`scripts/validate_feature_table.py` runs 47 checks against known history (all pass).
+close-measured ETF and QQQ features show same-day correlation. The regression is a diagnostic, not proof against leakage.
+`scripts/validate_feature_table.py` now runs 49 checks: 48 pass, one correlated-volatility warning, no failures.
 
 **Write.** A dedicated "point-in-time alignment" subsection with this table. It is the part
 of the pipeline most likely to be questioned and the easiest to get wrong.
@@ -134,7 +138,7 @@ of the pipeline most likely to be questioned and the easiest to get wrong.
 ---
 
 ## 6. Fed tone: classifier over keywords
-**Decision.** Each of the 168 statements is split into sentences and classified
+**Decision.** Each of the 170 statements is split into sentences and classified
 hawkish / dovish / neutral by a RoBERTa-large fine-tuned on the FOMC hawkish-dovish sentence
 dataset (Shah, Paturi & Chava, ACL 2023). Per statement: hawkish share, dovish share, net
 hawkishness, change versus the previous statement, and an exponentially weighted level
@@ -146,8 +150,7 @@ through 2009 to 2021 with a trough in 2020, hawkish in the 2022 to 2023 hiking c
 
 **Caveat to state.** The reference model (`gtfintechlab/FOMC-RoBERTa`) is gated on Hugging
 Face; the run used an ungated model trained on the same dataset
-(`LorenzoAleCon29/roberta-large-fomc-hawkish-dovish`), verified with probe sentences. Dissent
-sentences at the end of statements are scored along with the policy text.
+(`LorenzoAleCon29/roberta-large-fomc-hawkish-dovish`), verified with probe sentences. The scorer filters voting/media boilerplate, so dissent sentences matching those filters are excluded. The pinned revision is `f4759d4ad3f1182f81d87e47ba603261740d36cf`; model/input/output hashes are saved. This retrospective classifier is not a historical model-vintage archive.
 
 ---
 
@@ -159,8 +162,8 @@ CPI yoy, slope, VXN level, VXN-VIX as regime levels; EPU/EMU as log of trailing 
 each column a group (`qqq`, `market`, `rates`, `uncertainty`, `news`, `fed`, `sec`,
 `calendar`) and a role (`target`, `past`, `known_future`, `raw`).
 
-Two profiles: `full` (54 past + 15 known-future) for ablation; `core` (about 20 past + 7
-known-future) as the recommended single run.
+Two profiles: `full` (55 past + 14 known-future) for ablation; `core` (21 past + six
+known-future) for the initial comparison. Target-only and named group filters are implemented.
 
 **Write.** A feature table in the appendix generated from `groups.json`, plus the transform
 rules.
@@ -192,8 +195,7 @@ Secondary: directional accuracy with a binomial test; Diebold-Mariano test of MA
 the zero forecast; event-conditioned interval width around FOMC and CPI days.
 
 **Why.** MAE alone rewards predicting zero. Quantile loss and coverage measure what a
-return forecaster can actually deliver. The existing comparison script already reports MAE,
-bias, directional accuracy and 10/90 coverage, so this extends it.
+return forecaster can actually deliver. The comparison now implements the Gaussian baseline, weighted quantile loss, mean pinball loss, MAE, RMSE, bias, directional accuracy and both coverage bands. Statistical significance tests and event-conditioned analysis remain planned.
 
 **Charts to plan.** (1) Ladder table with deltas per rung. (2) Predicted 10 to 90 band
 around FOMC/CPI days with and without known-future flags, overlaid on realized absolute
@@ -206,9 +208,12 @@ model's uncertainty should have been higher.
 - **GDELT covers 2017 onward only**; news columns are empty for 55% of the sample. Tone is a generic lexicon score with known noise (~55% key-field accuracy in audits).
 - **Ticker survivorship**: the ten SEC companies are today's Nasdaq leaders, chosen with hindsight. Their filing and earnings flags describe the current index, not the 2006 index.
 - **EPU** revises its trailing 30 days; training values for the last month of any vintage are not exactly point-in-time. Single-day values are noisy, hence the 7-day mean.
-- **VXN and VIX3M before their CBOE files start** (2009) are backfilled from FRED, which posts next-day; for 2006 to 2009 those values were strictly available one day later than assumed.
-- **Fed tone model** is a substitute for the gated reference model.
+- **Daily volatility timing**: corrected by lagging all CBOE inputs, including historical FRED backfills, one day. Source inception gaps remain masked.
+- **Fed tone model** is a substitute for the gated reference model; its training data may overlap historical statements used as covariates.
+- **Calendar vintages**: historical CPI/NFP and scheduled Fed flags are reconstructed from release history/current archives, not a complete log of what was announced at every origin.
+- **Other revisions**: Yahoo adjusted prices and non-CPI macro history are current snapshots. These limitations prevent an unqualified claim of a fully point-in-time dataset.
 - **High-yield spread** dropped because FRED truncated its history; HYG (from April 2007) stands in.
+- **Pretraining overlap**: the pretrained model’s exposure to historical market series is not ruled out by our chronological LoRA split. Use a separate test interval after model release for stronger claims.
 - **Single-series fine-tuning** is below the regime the Chronos-2 authors recommend; results may not beat zero-shot, and that is a legitimate finding.
 - **No transaction costs or tradability claims** are made.
 
@@ -227,9 +232,9 @@ model's uncertainty should have been higher.
 ## 12. Reproducibility notes for the report
 - Pipeline: `README.md` lists the eleven commands in order; `docs/DATA_NOTES.md` lists conventions.
 - Keys: FRED API key (free) and an SEC contact email in `.env` (git-ignored).
-- Environment: Python 3.11, `requirements.txt`; the tone model downloads about 1.4 GB once.
+- Environment: tested locally on Python 3.12.10. TAU Slurm smoke job 869927 used Python 3.12.3, PyTorch 2.11.0+cu128, CUDA 12.8, Chronos Forecasting 2.3.2, Transformers 5.16.1, PEFT 0.20.0 and Accelerate 1.14.0 on an RTX 2080 Ti. Exact cluster setup is recorded in `slurm/README.md`; each model run records its package versions.
 - Commits: data layer v2 `d19acf9` (2026-09-07), FRED/SEC completion `7db1129`, validation fixes `182cfa6`.
-- Validation: `audit_processed_data.py --leakage` and `validate_feature_table.py` both pass on the committed table (5,200 rows x 77 columns).
+- Validation: the corrected working table has 5,201 rows x 77 columns. The current historical checks have no failures; the separate freshness gate still tracks the GDELT refresh.
 
 ---
 
@@ -238,4 +243,9 @@ model's uncertainty should have been higher.
 - **2026-09-07** Data layer rebuilt: new fetchers, FOMC scraper fixed (94 to 168), tone classifier, calendar, publication-aware builder, no zero-fill policy (sections 4, 6, 7).
 - **2026-09-07** FRED rebuilt with ALFRED-vintaged CPI; HY OAS dropped (FRED serves three years only). SEC rebuilt with full history, predecessor registrants for Alphabet and Broadcom, earnings 8-K items.
 - **2026-09-07** Validation pass found and fixed: Monday-NaN bug in the as-of join (FRED weekend rows), EPU weekend-day outliers (switched to 7-day mean), undefined FOMC cycle before the first 2006 meeting (seeded with December 2005). 47 history checks pass.
-- *(next: modeling runs; record rung results and any reversal of the decisions above here)*
+- **2026-09-08** Verified H.15 and spread publication timestamps against official pages. Replaced the insufficient calendar-day rate lag and same-day real-yield assumption with release-session mapping. Stable as-of ordering keeps the latest reference observation when several releases become available together.
+- **2026-09-08** Repaired UTC/early-close SEC alignment and removed earnings from known-future inputs; included pure CPI revisions; corrected Fed inventory to 170 and rebuilt scheduled FOMC/BLS flags. Lagged CBOE and uncertain daily commodity/FX bars. Added QQQ warm-up history.
+- **2026-09-08** Wired past masks and known-future inputs through training, rolling evaluation and prediction. Added target-only and group selection, a Gaussian baseline, quantile loss, provenance, source-readiness checks and Slurm batch files.
+- **2026-09-08** Local infrastructure runs completed: two-step LoRA on two three-session validation windows, checkpoint reload, and a one-window target-only pretrained run. The tiny comparison had WQL 0.7098 pretrained, 0.7143 LoRA, 0.6806 Gaussian; this is execution evidence only, not model selection. Artifacts are under ignored `models/data-v3-smoke/` and `models/data-v3-target-smoke/`; their metadata identifies the exact earlier table snapshot. A further five-step/five-window smoke test, full 69-covariate masked-input test, and offline pinned-adapter reload also passed (`models/data-v3-smoke-pinned/`, `models/data-v3-full-contract-smoke/`). These runs precede the final macro availability correction; their hashes preserve the actual snapshots used.
+- **2026-09-08** TAU Slurm GPU smoke job `869927` completed on `s-005` in 4:00 with exit code 0. It used one RTX 2080 Ti, loaded the pinned Chronos-2 revision, ran five LoRA steps, evaluated 15 forecast points, saved and reloaded the adapter offline, and generated the holdout forecast and summary. WQL was 0.734899 pretrained, 0.710572 LoRA and 0.667505 Gaussian; LoRA improved WQL 3.31%, MAE 1.84% and RMSE 2.08% over pretrained, but did not beat the Gaussian baseline. The sample is an infrastructure test, not evidence of forecasting skill. Job `869909` exposed the incompatible default PyTorch 2.14/CUDA 13 wheel; job `869924` was cancelled after a SIGBUS during overlay validation. The successful runtime is pinned in `slurm/README.md`, and artifacts are under ignored `models/slurm-smoke-869927/`.
+- *(next: finish the five rate-limited GDELT topic refreshes, rebuild the table, pass strict readiness without an exception, then run the full development comparison)*

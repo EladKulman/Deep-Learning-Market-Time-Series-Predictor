@@ -9,7 +9,9 @@ beautifulsoup4>=4.12
 lxml>=5.0
 openpyxl>=3.1
 pandas_market_calendars>=4.3
-torch>=2.2,<3
+# PyTorch 2.14's default Linux wheel uses CUDA 13 and is incompatible with the
+# TAU Slurm driver. PyTorch 2.11.0+cu128 is GPU-smoke-tested below this bound.
+torch>=2.2,<2.12
 transformers>=4.41,<6
 accelerate>=1.1.0,<2
 chronos-forecasting>=2.3.1

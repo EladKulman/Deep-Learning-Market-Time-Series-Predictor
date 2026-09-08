@@ -9,24 +9,11 @@ from pathlib import Path
 from typing import Sequence
 
 import pandas as pd
+from chronos_data import add_feature_args, select_features, training_inputs, provenance
 
 
 DEFAULT_OUTPUT_DIR = Path("models/chronos2-qqq")
 SMOKE_OUTPUT_DIR = Path("models/chronos2-qqq-smoke")
-SMOKE_TEST_FEATURES = (
-    "return_5d",
-    "volatility_20d",
-    "volume_change_1d",
-    "dff",
-    "dgs10",
-    "dgs2",
-    "t10y2y",
-    "cpi_yoy",
-    "vix_close",
-    "is_fomc_day",
-    "days_since_fomc",
-    "sec_total_filings",
-)
 
 
 def parse_args() -> argparse.Namespace:
@@ -149,6 +136,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Validate rows, feature selection, and splits without loading Chronos-2.",
     )
+    add_feature_args(parser)
     return parser.parse_args()
 
 
@@ -169,11 +157,6 @@ def apply_mode_defaults(args: argparse.Namespace) -> argparse.Namespace:
     return args
 
 
-def parse_column_list(raw_value: str | None) -> list[str] | None:
-    if raw_value is None:
-        return None
-    columns = [column.strip() for column in raw_value.split(",") if column.strip()]
-    return columns or None
 
 
 def load_modeling_frame(args: argparse.Namespace) -> pd.DataFrame:
@@ -189,7 +172,8 @@ def load_modeling_frame(args: argparse.Namespace) -> pd.DataFrame:
         raise ValueError(f"Missing required columns in {args.data}: {sorted(missing_columns)}")
 
     frame[args.timestamp_column] = pd.to_datetime(frame[args.timestamp_column], errors="coerce")
-    frame = frame.dropna(subset=[args.timestamp_column, args.target_column])
+    if frame[[args.timestamp_column, args.target_column]].isna().any().any():
+        raise ValueError("Invalid dates or missing targets would break the trading-session sequence")
     frame = frame.sort_values(args.timestamp_column).reset_index(drop=True)
     if args.max_rows is not None:
         if args.max_rows <= args.prediction_length * 3:
@@ -199,27 +183,6 @@ def load_modeling_frame(args: argparse.Namespace) -> pd.DataFrame:
     return frame
 
 
-def resolve_feature_columns(
-    frame: pd.DataFrame,
-    target_column: str,
-    timestamp_column: str,
-    feature_columns: Sequence[str] | None,
-    exclude_columns: Sequence[str] | None,
-) -> list[str]:
-    if feature_columns is not None:
-        missing = set(feature_columns) - set(frame.columns)
-        if missing:
-            raise ValueError(f"Unknown feature columns: {sorted(missing)}")
-        return list(feature_columns)
-
-    excluded = set(exclude_columns or [])
-    excluded.update({target_column, timestamp_column, "item_id"})
-    numeric_columns = [
-        column
-        for column in frame.columns
-        if column not in excluded and pd.api.types.is_numeric_dtype(frame[column])
-    ]
-    return [column for column in numeric_columns if not frame[column].isna().all()]
 
 
 def chronological_split(
@@ -255,17 +218,10 @@ def to_chronos_inputs(
     timestamp_column: str,
     feature_columns: Sequence[str],
     prediction_length: int,
+    known_covariates_names: Sequence[str] = (),
 ):
-    from chronos.chronos2.preprocess import from_data_frame
-
-    chronos_frame = frame[["item_id", timestamp_column, target_column, *feature_columns]].copy()
-    return from_data_frame(
-        chronos_frame,
-        target_columns=[target_column],
-        prediction_length=prediction_length,
-        id_column="item_id",
-        timestamp_column=timestamp_column,
-    )
+    return training_inputs(frame, target_column, timestamp_column, feature_columns,
+                           known_covariates_names, prediction_length)
 
 
 def print_training_plan(
@@ -299,6 +255,7 @@ def write_metadata(
     validation_frame: pd.DataFrame | None,
 ) -> None:
     metadata = {
+        **provenance(args, feature_columns, args.known_covariates_names),
         "model_id": args.model_id,
         "target_column": args.target_column,
         "feature_columns": list(feature_columns),
@@ -322,6 +279,13 @@ def write_metadata(
         else str(validation_frame[args.timestamp_column].max().date()),
     }
     output_dir.mkdir(parents=True, exist_ok=True)
+    # PEFT does not inherit the loaded base model's commit automatically. Persist it
+    # inside the adapter config so offline reload works with a revision-only cache.
+    adapter_path = output_dir / "finetuned-ckpt" / "adapter_config.json"
+    if adapter_path.exists() and args.model_revision:
+        adapter_config = json.loads(adapter_path.read_text())
+        adapter_config["revision"] = args.model_revision
+        adapter_path.write_text(json.dumps(adapter_config, indent=2) + "\n")
     (output_dir / "fine_tuning_metadata.json").write_text(
         json.dumps(metadata, indent=2) + "\n",
         encoding="utf-8",
@@ -330,21 +294,8 @@ def write_metadata(
 
 def main() -> None:
     args = apply_mode_defaults(parse_args())
-    feature_columns = parse_column_list(args.feature_columns)
-    exclude_columns = parse_column_list(args.exclude_columns)
-
     frame = load_modeling_frame(args)
-    if args.smoke_test and feature_columns is None:
-        feature_columns = [column for column in SMOKE_TEST_FEATURES if column in frame.columns]
-    resolved_features = resolve_feature_columns(
-        frame=frame,
-        target_column=args.target_column,
-        timestamp_column=args.timestamp_column,
-        feature_columns=feature_columns,
-        exclude_columns=exclude_columns,
-    )
-    if not resolved_features:
-        raise ValueError("No usable numeric covariate columns were selected.")
+    resolved_features, args.known_covariates_names = select_features(frame, args)
 
     train_frame, validation_frame = chronological_split(
         frame=frame,
@@ -362,12 +313,16 @@ def main() -> None:
         print("Prepare-only check completed; Chronos-2 was not loaded.")
         return
 
+    from transformers import set_seed
+    set_seed(args.seed)
+
     train_inputs = to_chronos_inputs(
         train_frame,
         target_column=args.target_column,
         timestamp_column=args.timestamp_column,
         feature_columns=resolved_features,
         prediction_length=args.prediction_length,
+        known_covariates_names=args.known_covariates_names,
     )
     validation_inputs = (
         None
@@ -378,12 +333,14 @@ def main() -> None:
             timestamp_column=args.timestamp_column,
             feature_columns=resolved_features,
             prediction_length=args.prediction_length,
+            known_covariates_names=args.known_covariates_names,
         )
     )
 
     from chronos import Chronos2Pipeline
 
-    pipeline = Chronos2Pipeline.from_pretrained(args.model_id, device_map=args.device_map)
+    pipeline = Chronos2Pipeline.from_pretrained(args.model_id, device_map=args.device_map, revision=args.model_revision)
+    args.model_revision = args.model_revision or getattr(pipeline.model.config, "_commit_hash", None)
     pipeline.fit(
         inputs=train_inputs,
         validation_inputs=validation_inputs,
@@ -396,6 +353,8 @@ def main() -> None:
         min_past=args.min_past,
         output_dir=args.output_dir,
         remove_printer_callback=True,
+        seed=args.seed,
+        report_to="none",
     )
 
     write_metadata(

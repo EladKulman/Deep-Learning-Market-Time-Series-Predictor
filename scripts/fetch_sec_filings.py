@@ -9,10 +9,9 @@ Changes versus the first version
 * TSMC is a foreign private issuer and files 20-F (annual) and 6-K (current) instead of
   10-K / 10-Q / 8-K. Those forms are now counted.
 * 8-K filings carry an ``items`` list. Item 2.02 ("Results of Operations and Financial
-  Condition") is the earnings release, which gives a free, authoritative earnings calendar
-  back to 2003. The acceptance timestamp splits it into pre-market (before 09:30 ET) and
-  post-market (16:00 ET or later) events so the feature table can attach the post-market
-  ones to the next trading day.
+  Condition") is a reported earnings event, not a known-in-advance schedule. Parse EDGAR
+  acceptance timestamps as UTC, then assign every filing to the first NYSE close strictly
+  after acceptance, including early closes. Missing timestamps use the next session.
 
 Output: data/processed/sec_filings_daily.csv, one row per calendar day from --start.
 """
@@ -27,6 +26,7 @@ import time
 from pathlib import Path
 
 import pandas as pd
+import pandas_market_calendars as mcal
 import requests
 from dotenv import load_dotenv
 
@@ -98,22 +98,36 @@ def process_filings(frame: pd.DataFrame, ticker: str, start: str, end: str | Non
     frame = frame[frame["date"] >= start]
     if end:
         frame = frame[frame["date"] <= end]
+    if frame.empty:
+        return frame
     frame["ticker"] = ticker
     items = frame.get("items", pd.Series("", index=frame.index)).fillna("")
     frame["is_earnings"] = (frame["form"] == "8-K") & items.str.split(",").apply(
         lambda parts: EARNINGS_ITEM in [p.strip() for p in parts]
     )
-    # Anything accepted before the 16:00 ET close (pre-market or intraday) can affect day T;
-    # acceptance at or after the close affects the next session. Missing timestamps are
-    # treated as before the close, the conservative choice for a same-day flag.
-    accepted = pd.to_datetime(frame.get("acceptanceDateTime"), errors="coerce")
-    minutes = accepted.dt.hour * 60 + accepted.dt.minute
+    # EDGAR timestamps ending in Z are UTC. Compare with actual NYSE closes, including
+    # 13:00 ET early closes. Unknown timestamps become available the following session.
+    accepted = pd.to_datetime(frame.get("acceptanceDateTime", pd.Series(index=frame.index, dtype=str)),
+                              errors="coerce", format="mixed", utc=True)
+    fallback = (pd.to_datetime(frame["date"]) + pd.Timedelta(hours=23, minutes=59)).dt.tz_localize("America/New_York").dt.tz_convert("UTC")
+    effective = accepted.fillna(fallback)
+    schedule = mcal.get_calendar("NYSE").schedule(
+        start_date=effective.min().date(), end_date=(effective.max() + pd.Timedelta(days=14)).date())
+    # At exactly the closing timestamp, conservatively use the next session.
+    indices = schedule["market_close"].searchsorted(effective, side="right")
+    frame["available_date"] = schedule.index[indices].strftime("%Y-%m-%d")
+    local_date = effective.dt.tz_convert("America/New_York").dt.strftime("%Y-%m-%d")
     frame["session"] = "pre"
-    frame.loc[minutes >= 16 * 60, "session"] = "post"
-    return frame[["date", "ticker", "form", "is_earnings", "session", "accessionNumber"]]
+    frame.loc[frame["available_date"] != local_date, "session"] = "post"
+    frame["acceptance_timestamp_missing"] = accepted.isna()
+    return frame[["date", "available_date", "ticker", "form", "is_earnings", "session",
+                  "acceptance_timestamp_missing", "accessionNumber"]]
 
 
 def build_daily(filings: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
+    # Every form, not just earnings, is attached to its first observable NYSE close.
+    filings = filings.copy()
+    filings["date"] = filings["available_date"]
     daily = pd.DataFrame({"date": pd.date_range(start, end, freq="D").strftime("%Y-%m-%d")})
 
     counts = filings.groupby(["date", "form"]).size().unstack(fill_value=0)
@@ -142,6 +156,7 @@ def main() -> None:
     parser.add_argument("--start", default="2006-01-01")
     parser.add_argument("--end", default=None)
     parser.add_argument("--out-dir", default="data")
+    parser.add_argument("--cached", action="store_true", help="Reprocess existing EDGAR JSON files without network or keys")
     args = parser.parse_args()
 
     raw_dir = Path(args.out_dir) / "raw" / "sec"
@@ -149,11 +164,28 @@ def main() -> None:
     raw_dir.mkdir(parents=True, exist_ok=True)
     proc_dir.mkdir(parents=True, exist_ok=True)
 
-    headers = get_headers()
-    ticker_to_cik = fetch_company_tickers(headers)
+    headers = {} if args.cached else get_headers()
+    ticker_to_cik = {} if args.cached else fetch_company_tickers(headers)
 
     frames = []
     for ticker in TICKERS:
+        if args.cached:
+            paths = sorted(raw_dir.glob(f"sec_submissions_{ticker}*.json"))
+            if not paths:
+                raise FileNotFoundError(f"Missing cached SEC history for {ticker}")
+            parts = []
+            for path in paths:
+                content = json.loads(path.read_text())
+                if "filings" in content:
+                    for extra in content["filings"].get("files", []):
+                        required = path.with_name(f"{path.stem}_{extra['name']}")
+                        if not required.exists():
+                            raise FileNotFoundError(required)
+                    content = content["filings"]["recent"]
+                parts.append(pd.DataFrame(content))
+            frames.append(process_filings(pd.concat(parts, ignore_index=True), ticker, args.start, args.end)
+                          .drop_duplicates(subset=["accessionNumber"]))
+            continue
         cik = ticker_to_cik.get(ticker)
         if not cik:
             logging.warning("No CIK for %s", ticker)
@@ -180,6 +212,11 @@ def main() -> None:
     daily = build_daily(filings, args.start, end)
     path = proc_dir / "sec_filings_daily.csv"
     daily.to_csv(path, index=False)
+    path.with_suffix(".metadata.json").write_text(json.dumps({
+        "alignment": "first_nyse_close_after_acceptance", "timestamp_timezone": "UTC",
+        "unknown_timestamp_rule": "next session after filing date", "earnings_role": "past",
+        "end": end, "missing_acceptance_timestamps": int(filings["acceptance_timestamp_missing"].sum()),
+    }, indent=2) + "\n")
     per_year = filings.groupby(filings["date"].str[:4]).size()
     logging.info("Filings per year:\n%s", per_year.to_string())
     logging.info("Wrote %s (%d days, %d columns)", path, len(daily), len(daily.columns))

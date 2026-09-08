@@ -3,3 +3,7 @@ __pycache__/
 models/
 .env
 .venv/
+.torchlibs/
+slurm-*.out
+oath/
+@oath

@@ -64,7 +64,7 @@ def main() -> None:
 
     print("\n== Market covariates ==")
     check("VXN peaks in 2008 or 2020 panic", t["vxn_close"].idxmax().year in (2008, 2020), f"{t['vxn_close'].idxmax().date()} = {t['vxn_close'].max():.1f}")
-    check("VIX term structure inverted on 2020-03-16", t.loc["2020-03-16", "vix_term_ratio"] > 1.2, f"VIX/VIX3M = {t.loc['2020-03-16', 'vix_term_ratio']:.2f}")
+    check("March 16 VIX inversion available on March 17", t.loc["2020-03-17", "vix_term_ratio"] > 1.2, f"VIX/VIX3M = {t.loc['2020-03-17', 'vix_term_ratio']:.2f}")
     check("VIX term structure in contango in calm 2017", t.loc["2017", "vix_term_ratio"].median() < 0.9, f"median {t.loc['2017', 'vix_term_ratio'].median():.2f}")
     check("VXN above VIX on average (tech premium)", t["vxn_minus_vix"].mean() > 0, f"mean {t['vxn_minus_vix'].mean():+.2f} points")
     check("HYG fell hard on 2020-03-09", t.loc["2020-03-09", "hyg_log_ret"] < -0.03, f"{t.loc['2020-03-09', 'hyg_log_ret']:+.3f}")
@@ -76,11 +76,23 @@ def main() -> None:
     print("\n== Rates and CPI ==")
     check("2y yield change in basis points scale", 2 < t["d_dgs2_bp"].std() < 12, f"std {t['d_dgs2_bp'].std():.1f} bp/day")
     check("curve inverted mid-2022 to mid-2024", (t.loc["2022-08":"2024-06", "t10y2y_lag1"] < 0).mean() > 0.95, f"{(t.loc['2022-08':'2024-06', 't10y2y_lag1'] < 0).mean():.0%} of days negative")
-    check("2y yield lag: Tuesday value equals Monday's FRED print", True, "verified in build (see audit)")
+    fred = pd.read_csv(TABLE.with_name("fred_macro_daily.csv"), parse_dates=["date"]).set_index("date")
+    expected = fred["dgs2"].dropna()
+    from build_daily_feature_table import fred_available_dates
+    expected.index = fred_available_dates(pd.Series(expected.index)).to_numpy()
+    expected = expected.groupby(level=0).last()
+    expected = expected.reindex(expected.index.union(t.index)).ffill().reindex(t.index).diff() * 100
+    lag_error = (expected - t["d_dgs2_bp"]).abs().max()
+    check("2y yield changes respect publication lag", lag_error < 1e-9, f"max difference {lag_error:.2e}")
     check("CPI yoy peaked at ~9% in summer 2022", 0.085 < t["cpi_yoy"].max() < 0.095 and t["cpi_yoy"].idxmax().year == 2022, f"{t['cpi_yoy'].max():.3f} on {t['cpi_yoy'].idxmax().date()} (vintage date)")
     check("CPI yoy negative in 2009 deflation", t.loc["2009", "cpi_yoy"].min() < -0.01, f"min {t.loc['2009', 'cpi_yoy'].min():+.3f}")
     jumps = t["cpi_yoy"].diff().abs() > 0
-    check("CPI yoy changes only on release days", (t.loc[jumps, "is_cpi_day"] == 1).mean() > 0.95, f"{(t.loc[jumps, 'is_cpi_day'] == 1).mean():.0%} of changes fall on flagged CPI days")
+    vintages = pd.read_csv(Path("data/raw/fred/CPIAUCSL_all_releases.csv"), parse_dates=["realtime_start"])
+    available = pd.DatetimeIndex(sorted(vintages.realtime_start.unique()))
+    idx = t.index.searchsorted(available)
+    effective_dates = set(t.index[idx[idx < len(t.index)]])
+    check("CPI changes only when an ALFRED release/revision is available", set(t.index[jumps]) <= effective_dates,
+          f"{int(jumps.sum())} changes; pure historical revisions included")
 
     print("\n== Uncertainty and news ==")
     check("EPU (7-day) peaks in the COVID or 2025 tariff shock", t["epu_log"].idxmax().strftime("%Y-%m") in {"2020-03", "2020-04", "2020-05", "2025-04", "2025-05"}, f"max on {t['epu_log'].idxmax().date()}")
@@ -101,6 +113,8 @@ def main() -> None:
     print("\n== Calendar ==")
     check("about 8 FOMC days a year", 7.5 <= t.loc["2007":"2025", "is_fomc_day"].groupby(t.loc["2007":"2025"].index.year).sum().mean() <= 9, f"mean {t.loc['2007':'2025', 'is_fomc_day'].groupby(t.loc['2007':'2025'].index.year).sum().mean():.1f}")
     check("days_to_fomc is 0 on FOMC days", (t.loc[t["is_fomc_day"] == 1, "days_to_fomc"] == 0).all(), "")
+    check("emergency Fed decisions are not known-future meetings", (t.loc[["2008-01-22", "2008-10-08", "2020-03-03", "2020-03-23", "2025-08-22"], "is_fomc_day"] == 0).all(), "unscheduled calls and notation votes excluded")
+    check("earnings counts are past-only", groups["ndx_earnings_count"]["role"] == "past", "8-K observations are not an advance schedule")
     check("about 12 CPI and 12 NFP days a year", 11 <= t.loc["2007":"2024", "is_cpi_day"].groupby(t.loc["2007":"2024"].index.year).sum().mean() <= 12.5 and 11 <= t.loc["2007":"2024", "is_nfp_day"].groupby(t.loc["2007":"2024"].index.year).sum().mean() <= 12.5,
           f"CPI {t.loc['2007':'2024', 'is_cpi_day'].groupby(t.loc['2007':'2024'].index.year).sum().mean():.1f}, NFP {t.loc['2007':'2024', 'is_nfp_day'].groupby(t.loc['2007':'2024'].index.year).sum().mean():.1f}")
     opex = t.index[t["is_opex_day"] == 1]

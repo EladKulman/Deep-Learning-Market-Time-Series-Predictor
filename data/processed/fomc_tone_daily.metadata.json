@@ -1,0 +1,21 @@
+{
+  "model_id": "LorenzoAleCon29/roberta-large-fomc-hawkish-dovish",
+  "model_revision": "f4759d4ad3f1182f81d87e47ba603261740d36cf",
+  "input_sha256": "b7bc7cf2e42998b603787b8aacc7b7423318afce3334c9b2f2bb97f2b57e69cb",
+  "scores_sha256": "cffbdfe21f873ad4ebf3d0c40ea2aa5491cad390eea21f6c23644b84a01f240c",
+  "daily_sha256": "fa75011a546a715d55d7c76ce2ed0b180023996b860a1018907a49eb259567fe",
+  "statement_count": 170,
+  "start": "2006-01-01",
+  "end": "2026-09-07",
+  "labels": {
+    "0": "dovish",
+    "1": "hawkish",
+    "2": "neutral"
+  },
+  "probes": {
+    "hawkish": "hawkish",
+    "dovish": "dovish",
+    "neutral": "neutral"
+  },
+  "device": "mps"
+}

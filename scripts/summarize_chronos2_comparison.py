@@ -14,7 +14,7 @@ import pandas as pd
 DEFAULT_COMPARISON_DIR = Path("models/chronos2-validation-comparison")
 BASE_MODEL_NAME = "base_pretrained"
 FINE_TUNED_MODEL_NAME = "fine_tuned"
-LOWER_IS_BETTER = {"mae_log_return", "rmse_log_return", "abs_bias_log_return"}
+LOWER_IS_BETTER = {"mae_log_return", "rmse_log_return", "abs_bias_log_return", "weighted_quantile_loss", "mean_pinball_loss"}
 HIGHER_IS_BETTER = {"directional_accuracy"}
 COVERAGE_TARGET = 0.8
 
@@ -123,8 +123,9 @@ def compare_metric(base_value: float, fine_value: float, metric: str) -> tuple[f
         improvement = None if base_gap == 0 else (base_gap - fine_gap) / base_gap * 100
         winner = FINE_TUNED_MODEL_NAME if fine_gap < base_gap else BASE_MODEL_NAME
     elif metric == "q10_q90_mean_width":
-        improvement = None if base_value == 0 else (base_value - fine_value) / abs(base_value) * 100
-        winner = FINE_TUNED_MODEL_NAME if fine_value < base_value else BASE_MODEL_NAME
+        # Narrower intervals are only useful when calibrated; width alone has no winner.
+        improvement = None
+        winner = "descriptive"
     else:
         improvement = None
         winner = "n/a"
@@ -136,6 +137,8 @@ def build_delta_table(metrics: pd.DataFrame) -> pd.DataFrame:
     metric_columns = [
         column
         for column in [
+            "weighted_quantile_loss",
+            "mean_pinball_loss",
             "mae_log_return",
             "rmse_log_return",
             "abs_bias_log_return",
@@ -226,6 +229,10 @@ def overall_verdict(delta_table: pd.DataFrame) -> str:
     rmse = overall[overall["metric"] == "rmse_log_return"]
     direction = overall[overall["metric"] == "directional_accuracy"]
     parts = []
+    quantile = overall[overall["metric"] == "weighted_quantile_loss"]
+    if not quantile.empty:
+        row = quantile.iloc[0]
+        parts.append(f"Quantile-loss winner: {row['winner']} ({format_number(row['improvement_pct'])}% fine-tuning improvement).")
     if not mae.empty:
         row = mae.iloc[0]
         parts.append(
@@ -253,6 +260,8 @@ def write_markdown_report(
     top_n: int,
 ) -> None:
     lines = ["# Chronos-2 Validation Summary", ""]
+    if metadata.get("num_windows", 0) <= 5:
+        lines.extend(["Infrastructure smoke test: the small sample does not establish forecasting skill.", ""])
     lines.extend(["## Verdict", "", overall_verdict(delta_table), ""])
 
     if metadata:
@@ -280,6 +289,7 @@ def write_markdown_report(
             [
                 "model",
                 "rows",
+                *[c for c in ("weighted_quantile_loss", "mean_pinball_loss", "q01_q99_coverage") if c in overall_metrics],
                 "mae_log_return",
                 "rmse_log_return",
                 "bias_log_return",

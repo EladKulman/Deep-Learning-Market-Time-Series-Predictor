@@ -83,14 +83,14 @@ date,label,sentence
 2007-05-09,hawkish,"In these circumstances, the Committee's predominant policy concern remains the risk that inflation will fail to moderate as expected."
 2007-05-09,neutral,"Future policy adjustments will depend on the evolution of the outlook for both inflation and economic growth, as implied by incoming information."
 2007-05-09,neutral,William Poole; and Kevin M.
-2007-06-18,neutral,"Economic growth appears to have been moderate during the first half of this year, despite the ongoing adjustment in the housing sector."
-2007-06-18,neutral,The economy seems likely to continue to expand at a moderate pace over coming quarters.
-2007-06-18,neutral,Readings on core inflation have improved modestly in recent months.
-2007-06-18,neutral,"However, a sustained moderation in inflation pressures has yet to be convincingly demonstrated."
-2007-06-18,hawkish,"Moreover, the high level of resource utilization has the potential to sustain those pressures."
-2007-06-18,hawkish,"In these circumstances, the Committee's predominant policy concern remains the risk that inflation will fail to moderate as expected."
-2007-06-18,neutral,"Future policy adjustments will depend on the evolution of the outlook for both inflation and economic growth, as implied by incoming information."
-2007-06-18,neutral,William Poole; and Kevin M.
+2007-06-28,neutral,"Economic growth appears to have been moderate during the first half of this year, despite the ongoing adjustment in the housing sector."
+2007-06-28,neutral,The economy seems likely to continue to expand at a moderate pace over coming quarters.
+2007-06-28,neutral,Readings on core inflation have improved modestly in recent months.
+2007-06-28,neutral,"However, a sustained moderation in inflation pressures has yet to be convincingly demonstrated."
+2007-06-28,hawkish,"Moreover, the high level of resource utilization has the potential to sustain those pressures."
+2007-06-28,hawkish,"In these circumstances, the Committee's predominant policy concern remains the risk that inflation will fail to moderate as expected."
+2007-06-28,neutral,"Future policy adjustments will depend on the evolution of the outlook for both inflation and economic growth, as implied by incoming information."
+2007-06-28,neutral,William Poole; and Kevin M.
 2007-08-07,neutral,Economic growth was moderate during the first half of the year.
 2007-08-07,hawkish,"Financial markets have been volatile in recent weeks, credit conditions have become tighter for some households and businesses, and the housing correction is ongoing."
 2007-08-07,hawkish,"Nevertheless, the economy seems likely to continue to expand at a moderate pace over coming quarters, supported by solid growth in employment and incomes and a robust global economy."
@@ -131,6 +131,15 @@ date,label,sentence
 2007-12-11,dovish,"Rosengren, who preferred to lower the target for the federal funds rate by 50 basis points at this meeting."
 2007-12-11,dovish,"In a related action, the Board of Governors unanimously approved a 25-basis-point decrease in the discount rate to 4-3/4 percent."
 2007-12-11,neutral,"In taking this action, the Board approved the requests submitted by the Boards of Directors of the Federal Reserve Banks of New York, Philadelphia, Cleveland, Richmond, Atlanta, Chicago, and St."
+2008-01-22,dovish,The Committee took this action in view of a weakening of the economic outlook and increasing downside risks to growth.
+2008-01-22,hawkish,"While strains in short-term funding markets have eased somewhat, broader financial market conditions have continued to deteriorate and credit has tightened further for some businesses and households."
+2008-01-22,dovish,"Moreover, incoming information indicates a deepening of the housing contraction as well as some softening in labor markets."
+2008-01-22,neutral,"The Committee expects inflation to moderate in coming quarters, but it will be necessary to continue to monitor inflation developments carefully."
+2008-01-22,neutral,Appreciable downside risks to growth remain.
+2008-01-22,neutral,The Committee will continue to assess the effects of financial and other developments on economic prospects and will act in a timely manner as needed to address those risks.
+2008-01-22,neutral,Absent and not voting was Frederic S.
+2008-01-22,dovish,"In a related action, the Board of Governors approved a 75-basis-point decrease in the discount rate to 4 percent."
+2008-01-22,neutral,"In taking this action, the Board approved the requests submitted by the Boards of Directors of the Federal Reserve Banks of Chicago and Minneapolis."
 2008-01-30,dovish,"Financial markets remain under considerable stress, and credit has tightened further for some businesses and households."
 2008-01-30,dovish,"Moreover, recent information indicates a deepening of the housing contraction as well as some softening in labor markets."
 2008-01-30,neutral,"The Committee expects inflation to moderate in coming quarters, but it will be necessary to continue to monitor inflation developments carefully."
@@ -217,6 +226,21 @@ date,label,sentence
 2008-10-29,hawkish,The Committee will monitor economic and financial developments carefully and will act as needed to promote sustainable economic growth and price stability.
 2008-10-29,dovish,"In a related action, the Board of Governors unanimously approved a 50-basis-point decrease in the discount rate to 1-1/4 percent."
 2008-10-29,neutral,"In taking this action, the Board approved the requests submitted by the Boards of Directors of the Federal Reserve Banks of Boston, New York, Cleveland, and San Francisco."
+2008-12-16,dovish,"Since the Committee's last meeting, labor market conditions have deteriorated, and the available data indicate that consumer spending, business investment, and industrial production have declined."
+2008-12-16,hawkish,Financial markets remain quite strained and credit conditions tight.
+2008-12-16,dovish,"Overall, the outlook for economic activity has weakened further."
+2008-12-16,dovish,"Meanwhile, inflationary pressures have diminished appreciably."
+2008-12-16,dovish,"In light of the declines in the prices of energy and other commodities and the weaker prospects for economic activity, the Committee expects inflation to moderate further in coming quarters."
+2008-12-16,hawkish,The Federal Reserve will employ all available tools to promote the resumption of sustainable economic growth and to preserve price stability.
+2008-12-16,dovish,"In particular, the Committee anticipates that weak economic conditions are likely to warrant exceptionally low levels of the federal funds rate for some time."
+2008-12-16,dovish,The focus of the Committee's policy going forward will be to support the functioning of financial markets and stimulate the economy through open market operations and other measures that sustain the size of the Federal Reserve's balance sheet at a high level.
+2008-12-16,dovish,"As previously announced, over the next few quarters the Federal Reserve will purchase large quantities of agency debt and mortgage-backed securities to provide support to the mortgage and housing markets, and it stands ready to expand its purchases of agency debt and mortgage-backed securities as conditions warrant."
+2008-12-16,neutral,The Committee is also evaluating the potential benefits of purchasing longer-term Treasury securities.
+2008-12-16,dovish,"Early next year, the Federal Reserve will also implement the Term Asset-Backed Securities Loan Facility to facilitate the extension of credit to households and small businesses."
+2008-12-16,dovish,The Federal Reserve will continue to consider ways of using its balance sheet to further support credit markets and economic activity.
+2008-12-16,dovish,"In a related action, the Board of Governors unanimously approved a 75-basis-point decrease in the discount rate to 1/2 percent."
+2008-12-16,neutral,"In taking this action, the Board approved the requests submitted by the Boards of Directors of the Federal Reserve Banks of New York, Cleveland, Richmond, Atlanta, Minneapolis, and San Francisco."
+2008-12-16,neutral,The Board also established interest rates on required and excess reserve balances of 1/4 percent.
 2009-01-28,dovish,The Committee continues to anticipate that economic conditions are likely to warrant exceptionally low levels of the federal funds rate for some time.
 2009-01-28,dovish,Information received since the Committee met in December suggests that the economy has weakened further.
 2009-01-28,dovish,"Industrial production, housing starts, and employment have continued to decline steeply, as consumers and businesses have cut back spending."
