@@ -2,7 +2,7 @@
   "profile": "full",
   "start": "2006-01-01",
   "rows": 5201,
-  "table_sha256": "21842d7101ad0868c1d0024b5bcf35470a0e332796717897dfbeb74bbe8532d2",
+  "table_sha256": "e0c8d48b38059eb70d9f91931bff68678dbcc46aeadab1502ded1b9ee11df037",
   "groups_sha256": "d0933780c2ef78575046f3da51cb2dcd9f3c2b1ac5a0a1fa1c5721add848d4b8",
   "builder_sha256": "7beb3e027a292db4ae1f15d3b4657d8bb22efee69398f23b03d2c0fbfbb8dc24",
   "source_sha256": {
@@ -11,7 +11,7 @@
     "cross_asset_daily.csv": "79820c82db666cc8f7f31031aa973acd2d4f462018edfcd0a415d044047f534a",
     "fred_macro_daily.csv": "e8a511b3df481d3de89e393bd55c2ee3efcd8b2171aca4815760a7eeb3eeea05",
     "epu_daily.csv": "fc38a27b1c05023d8d30bfcdc55077e8aa6f76881345f1a9a0c75a6b56fa192e",
-    "gdelt_topic_daily.csv": "254917a16d7484ce17a68893669886fca3ea7130c49be8c0f03b922daaa8c1ef",
+    "gdelt_topic_daily.csv": "e236a5cb57702e6fea7004b55dd5cdf1b1344f2e19ce0dd0eacfce028ac12067",
     "fomc_events_daily.csv": "52dd04b29c9ebd489be1222848bb8e63e366ceb404cccc822cefd4f2e5d6a23b",
     "fomc_tone_daily.csv": "fa75011a546a715d55d7c76ce2ed0b180023996b860a1018907a49eb259567fe",
     "sec_filings_daily.csv": "1782b064abfaf07a7386b4b4a3d03e74db4007b64996047d651ce30851bf99bb",

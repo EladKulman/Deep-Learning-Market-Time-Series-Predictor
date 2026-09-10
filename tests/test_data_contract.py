@@ -118,6 +118,21 @@ class DataContractTests(unittest.TestCase):
         self.assertEqual(result.date.tolist(), frame.date.tolist())
         self.assertTrue(result.news.isna().all())
 
+    def test_modeling_sample_date_filters_are_inclusive(self):
+        frame = self.frame()
+        result = prepare_modeling_frame(
+            frame, "date", "target", ["news"], None,
+            start_date="2026-01-05", end_date="2026-01-09",
+        )
+        self.assertEqual(result.date.dt.strftime("%Y-%m-%d").tolist(), [
+            "2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09",
+        ])
+        with self.assertRaisesRegex(ValueError, "start-date"):
+            prepare_modeling_frame(
+                frame, "date", "target", ["news"], None,
+                start_date="2026-01-09", end_date="2026-01-05",
+            )
+
     @staticmethod
     def frame():
         return pd.DataFrame({"date": pd.bdate_range("2026-01-01", periods=12),

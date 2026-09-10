@@ -71,6 +71,14 @@ def parse_args() -> argparse.Namespace:
         help="Number of final rows reserved for validation.",
     )
     parser.add_argument(
+        "--start-date",
+        help="Optional inclusive sample start (YYYY-MM-DD), applied before splitting.",
+    )
+    parser.add_argument(
+        "--end-date",
+        help="Optional inclusive sample end (YYYY-MM-DD), applied before splitting.",
+    )
+    parser.add_argument(
         "--stride",
         type=int,
         default=None,
@@ -229,12 +237,24 @@ def prepare_modeling_frame(
     target_column: str,
     feature_columns: Sequence[str],
     max_rows: int | None,
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> pd.DataFrame:
     frame = frame.copy()  # Missing covariates are masked, never used to remove trading days.
     frame = frame.sort_values(timestamp_column).reset_index(drop=True)
+    start = pd.Timestamp(start_date) if start_date else None
+    end = pd.Timestamp(end_date) if end_date else None
+    if start is not None and end is not None and start > end:
+        raise ValueError("--start-date must not be after --end-date")
+    if start is not None:
+        frame = frame.loc[frame[timestamp_column] >= start]
+    if end is not None:
+        frame = frame.loc[frame[timestamp_column] <= end]
     if max_rows is not None:
-        frame = frame.tail(max_rows).reset_index(drop=True)
-    return frame
+        frame = frame.tail(max_rows)
+    if frame.empty:
+        raise ValueError("Date and row filters leave no modeling observations")
+    return frame.reset_index(drop=True)
 
 
 def split_train_validation(
@@ -450,6 +470,10 @@ def write_metadata(
         "train_end": str(train_frame[args.timestamp_column].max().date()),
         "validation_start": str(validation_frame[args.timestamp_column].min().date()),
         "validation_end": str(validation_frame[args.timestamp_column].max().date()),
+        "requested_start_date": args.start_date,
+        "requested_end_date": args.end_date,
+        "sample_start": str(train_frame[args.timestamp_column].min().date()),
+        "sample_end": str(validation_frame[args.timestamp_column].max().date()),
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "comparison_metadata.json").write_text(
@@ -470,6 +494,7 @@ def print_plan(
     print(f"  output_dir: {args.output_dir}")
     print(f"  target: {args.target_column}")
     print(f"  features: {len(feature_columns)}")
+    print(f"  sample: {train_frame[args.timestamp_column].min().date()} -> {validation_frame[args.timestamp_column].max().date()}")
     print(f"  train_rows: {len(train_frame)}")
     print(f"  validation_rows: {len(validation_frame)}")
     print(f"  validation_windows: {num_windows}")
@@ -495,6 +520,8 @@ def main() -> None:
         target_column=args.target_column,
         feature_columns=feature_columns,
         max_rows=args.max_rows,
+        start_date=args.start_date,
+        end_date=args.end_date,
     )
     train_frame, validation_frame, split_index = split_train_validation(
         frame=frame,

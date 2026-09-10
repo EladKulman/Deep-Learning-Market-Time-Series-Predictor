@@ -1,0 +1,120 @@
+{
+  "description": "Common-control Chronos-2 LoRA screen for external news and event sources.",
+  "model_id": "amazon/chronos-2",
+  "model_revision": "29ec3766d36d6f73f0696f85560a422f50e8498c",
+  "start_date": "2017-01-03",
+  "end_date": "2026-06-30",
+  "prediction_length": 5,
+  "context_length": 512,
+  "validation_rows": 252,
+  "stride": 5,
+  "num_steps": 200,
+  "learning_rate": 0.00001,
+  "train_batch_size": 8,
+  "eval_batch_size": 8,
+  "seed": 42,
+  "primary_metric": "weighted_quantile_loss",
+  "control_features": [
+    "overnight_gap",
+    "parkinson_vol_1d",
+    "parkinson_vol_22d",
+    "volume_z_20d",
+    "mom_21d",
+    "dist_200dma",
+    "vxn_log_chg",
+    "vxn_minus_vix",
+    "vix_term_ratio",
+    "tlt_log_ret",
+    "hyg_log_ret",
+    "d_dgs2_bp",
+    "t10y2y_lag1",
+    "d_dfii10_bp",
+    "cpi_yoy",
+    "is_fomc_day",
+    "is_cpi_day",
+    "is_nfp_day",
+    "days_to_fomc",
+    "days_to_month_end",
+    "is_opex_week"
+  ],
+  "setups": {
+    "control": {
+      "description": "Market, QQQ, rates, and known calendar controls; no news or disclosure source.",
+      "add_features": []
+    },
+    "uncertainty": {
+      "description": "Control plus daily EPU and EMU uncertainty.",
+      "add_features": ["epu_log", "emu_log"]
+    },
+    "fomc_tone": {
+      "description": "Control plus classifier-derived FOMC tone state and change.",
+      "add_features": [
+        "fomc_net_hawkish_last",
+        "fomc_net_hawkish_ewma",
+        "fomc_tone_change_last",
+        "days_since_fomc"
+      ]
+    },
+    "sec_disclosures": {
+      "description": "Control plus Nasdaq leader earnings and SEC filing activity.",
+      "add_features": ["ndx_earnings_count", "sec_8k_count", "sec_total_filings"]
+    },
+    "gdelt_all": {
+      "description": "Control plus GDELT share and tone for all six topics.",
+      "add_features": [
+        "gdelt_ai_news_share",
+        "gdelt_semiconductor_news_share",
+        "gdelt_fed_news_share",
+        "gdelt_inflation_news_share",
+        "gdelt_big_tech_earnings_news_share",
+        "gdelt_recession_news_share",
+        "gdelt_ai_avg_tone",
+        "gdelt_semiconductor_avg_tone",
+        "gdelt_fed_avg_tone",
+        "gdelt_inflation_avg_tone",
+        "gdelt_big_tech_earnings_avg_tone",
+        "gdelt_recession_avg_tone"
+      ]
+    },
+    "gdelt_ai": {
+      "description": "Control plus GDELT AI news share and tone only.",
+      "add_features": ["gdelt_ai_news_share", "gdelt_ai_avg_tone"]
+    },
+    "gdelt_semiconductor": {
+      "description": "Control plus GDELT semiconductor news share and tone only.",
+      "add_features": [
+        "gdelt_semiconductor_news_share",
+        "gdelt_semiconductor_avg_tone"
+      ]
+    },
+    "gdelt_fed": {
+      "description": "Control plus GDELT Federal Reserve news share and tone only.",
+      "add_features": ["gdelt_fed_news_share", "gdelt_fed_avg_tone"]
+    },
+    "gdelt_inflation": {
+      "description": "Control plus GDELT inflation news share and tone only.",
+      "add_features": [
+        "gdelt_inflation_news_share",
+        "gdelt_inflation_avg_tone"
+      ]
+    },
+    "gdelt_big_tech_earnings": {
+      "description": "Control plus GDELT big-tech earnings news share and tone only.",
+      "add_features": [
+        "gdelt_big_tech_earnings_news_share",
+        "gdelt_big_tech_earnings_avg_tone"
+      ]
+    },
+    "gdelt_recession": {
+      "description": "Control plus GDELT recession news share and tone only.",
+      "add_features": [
+        "gdelt_recession_news_share",
+        "gdelt_recession_avg_tone"
+      ]
+    },
+    "all_external": {
+      "description": "Control plus uncertainty, FOMC tone, SEC disclosures, and all GDELT topics.",
+      "include_setups": ["uncertainty", "fomc_tone", "sec_disclosures", "gdelt_all"]
+    }
+  }
+}

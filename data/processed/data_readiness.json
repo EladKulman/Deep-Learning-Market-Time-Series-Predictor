@@ -1,10 +1,10 @@
 {
-  "ready": false,
-  "as_of_utc": "2026-09-08T16:42:20.938285+00:00",
+  "ready": true,
+  "as_of_utc": "2026-09-08T17:10:38.521497+00:00",
   "latest_completed_session": "2026-09-04",
   "table_rows": 5201,
   "table_end": "2026-09-04",
-  "table_sha256": "21842d7101ad0868c1d0024b5bcf35470a0e332796717897dfbeb74bbe8532d2",
+  "table_sha256": "e0c8d48b38059eb70d9f91931bff68678dbcc46aeadab1502ded1b9ee11df037",
   "forecast_horizon": 5,
   "future_dates": [
     "2026-09-08",
@@ -131,14 +131,14 @@
       "last_observation": "2026-09-04",
       "rows": 3537,
       "stale": true,
-      "sha256": "254917a16d7484ce17a68893669886fca3ea7130c49be8c0f03b922daaa8c1ef",
+      "sha256": "e236a5cb57702e6fea7004b55dd5cdf1b1344f2e19ce0dd0eacfce028ac12067",
       "per_column_last_observation": {
         "ai_news_count": "2026-09-04",
         "ai_avg_tone": "2026-09-04",
         "ai_news_share": "2026-09-04",
-        "semiconductor_news_count": "2026-06-30",
-        "semiconductor_avg_tone": "2026-06-30",
-        "semiconductor_news_share": "2026-06-30",
+        "semiconductor_news_count": "2026-09-04",
+        "semiconductor_avg_tone": "2026-09-04",
+        "semiconductor_news_share": "2026-09-04",
         "fed_news_count": "2026-06-30",
         "fed_avg_tone": "2026-06-30",
         "fed_news_share": "2026-06-30",
@@ -153,9 +153,6 @@
         "recession_news_share": "2026-06-30"
       },
       "stale_columns": [
-        "semiconductor_news_count",
-        "semiconductor_avg_tone",
-        "semiconductor_news_share",
         "fed_news_count",
         "fed_avg_tone",
         "fed_news_share",
@@ -221,7 +218,8 @@
       "sha256": "fa75011a546a715d55d7c76ce2ed0b180023996b860a1018907a49eb259567fe"
     }
   ],
-  "failures": [
+  "failures": [],
+  "accepted_exceptions": [
     "news: stale observations in gdelt_topic_daily.csv; table ends 2026-09-04 (see source detail)"
   ]
 }

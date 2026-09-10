@@ -4,12 +4,12 @@ Workshop project by Elad Kulman and Tom Weitman. The current experiment forecast
 one-day log returns at horizons of one to five NYSE sessions, using pretrained Chronos-2,
 LoRA fine-tuning, and feature-group ablations. Each forecast origin is the NYSE close.
 
-The immediate priorities are completing the rate-limited GDELT tail and moving from the
-completed GPU smoke test to the full development comparison.
+The immediate priorities are completing the four remaining rate-limited GDELT tails and
+testing which source family drives the winning combined-source development result.
 The original BTC/TFT proposal is historical context; see `docs/REPORT_DECISIONS.md` for
 the current research choices and `docs/DATA_NOTES.md` for source timing and limitations.
 
-## Current status (2026-09-08)
+## Current status (2026-09-10)
 
 - Repaired SEC timestamp/early-close alignment, CPI revision handling, two missing Fed
   statements, and the scheduled-event calendar. Fed inventory and tone cover 170 statements.
@@ -17,12 +17,19 @@ the current research choices and `docs/DATA_NOTES.md` for source timing and limi
   masked; only declared calendar features can enter the forecast horizon.
 - Local CPU tests trained and reloaded LoRA adapters, exercised target-only and complete
   masked-covariate inputs, and verified the pinned model cache offline.
-- The AI GDELT topic is refreshed through September 7; five topic caches still stop at June 30, 2026. The incremental refresh is resumable;
+- The AI and semiconductor GDELT topics are refreshed through September 7; four topic caches still stop at June 30, 2026. The incremental refresh is resumable;
   run the readiness check below for the authoritative current status.
 - TAU Slurm job `869927` completed on an RTX 2080 Ti with PyTorch 2.11.0+cu128: pinned
   pretrained inference, five LoRA steps, validation, adapter reload, and holdout prediction
   all passed. This tiny run checks execution, not forecasting skill. See `slurm/README.md`
   and ignored local artifacts under `models/slurm-smoke-869927/`.
+- Slurm arrays `869989` and `871482` completed 12 full source-screen fits. Across three
+  seeds, the combined `all_external` setup led control by 0.60% mean WQL and had better
+  calibration, but its paired-window interval still crossed zero. See
+  `docs/NEWS_ABLATION_RESULTS.md`.
+- Slurm array `874192` completed the six matched single-topic GDELT fits. Fed news had the
+  best seed-42 WQL (`0.686526`, 1.28% below control), with recession nearly tied at
+  `0.686796`. See `docs/GDELT_TOPIC_RESULTS.md`.
 
 ## Setup
 
@@ -125,7 +132,9 @@ windows, 64-session model context, five optimizer steps, six covariates. The sep
 
 A pretrained target-only arm uses `--feature-profile target --base-only`. Live pretrained
 prediction uses `predict_chronos2.py --pretrained --prediction-length 5`. For the actual
-GPU smoke test and first full comparison, follow `slurm/README.md`.
+GPU smoke test and first full comparison, follow `slurm/README.md`. The controlled
+news-source screen is specified in `docs/NEWS_ABLATION_PLAN.md` and
+`configs/news_ablation.json`; completed results are in `docs/NEWS_ABLATION_RESULTS.md`.
 
 Full comparison defaults reserve the final 252 sessions, train LoRA on earlier rows only,
 and evaluate pretrained, fine-tuned, and zero-mean Gaussian forecasts on identical windows.
@@ -144,6 +153,9 @@ from the old feature schema must be retrained.
 python -m unittest discover -s tests -v
 bash -n slurm/chronos_smoke.sbatch
 bash -n slurm/chronos_validation.sbatch
+bash -n slurm/chronos_news_ablation.sbatch
+bash -n slurm/chronos_news_robustness.sbatch
+bash -n slurm/chronos_gdelt_topic_ablation.sbatch
 ```
 
 - `data/raw/`: downloaded observations, source schedules, statement text, and labels.

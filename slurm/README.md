@@ -109,3 +109,32 @@ reported for the 10/90 and 1/99 intervals. Interval width alone has no preferred
 
 Record the job ID, allocation, data hashes, model revision, package versions, seed, and
 outcome in `docs/REPORT_DECISIONS.md` after a real cluster run.
+
+## News-source screen
+
+Array `869989` completed the six seed-42 source configurations on an RTX 2080 Ti. Array
+`871482` completed seeds 43 and 44 for control, EPU/EMU, and all external sources. The
+12 fits used 2,133 training sessions, 50 five-session validation windows, context length
+512, and 200 LoRA steps. Results and interpretation are in
+`docs/NEWS_ABLATION_RESULTS.md`; local ignored artifacts are under
+`models/news-ablation-869989/`.
+
+The experiment jobs pass `--as-of 2026-09-04T23:59:59Z` to validate the immutable feature
+snapshot independently of the current date. Do not copy this frozen timestamp into live
+forecast jobs. Robustness array `871482` used 6 GB host RAM because other allocations had
+reserved most memory on the otherwise available RTX node; all tasks completed without an
+out-of-memory failure.
+
+## Single-topic GDELT screen
+
+Array `874192` completed all six seed-42 topic fits on `s-005` with exit code 0. The tasks
+ran serially and took 6:07, 4:06, 4:19, 3:30, 3:08, and 3:20. Each added only one GDELT
+topic's share and tone to the 21 controls. Results are in `docs/GDELT_TOPIC_RESULTS.md` and
+artifacts are stored beside the earlier control under `models/news-ablation-869989/`.
+
+Preflight array `874171` stopped before model loading because a newer processed GDELT tail
+no longer matched the frozen table metadata. Its remaining tasks were cancelled. The newer
+file was preserved as `gdelt_topic_daily.post_snapshot_backup.csv`, and the exact processed
+GDELT snapshot recorded by the control was restored. The successful readiness record and
+all model metadata confirm table SHA-256
+`e0c8d48b38059eb70d9f91931bff68678dbcc46aeadab1502ded1b9ee11df037`.
