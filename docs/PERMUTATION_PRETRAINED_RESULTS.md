@@ -39,25 +39,35 @@ where the lagged volatility move was large and the model over-reacted to it.
 
 ## Findings
 
-1. **The pretrained model misreads the lagged VXN change.** In the current table
+1. **Given the VXN change, the pretrained model is punished in volatility-shock weeks.** In the current table
    `vxn_log_chg` is lagged one session (Elad's conservative CBOE settlement rule), so on day T
-   it carries the previous session's volatility move. The model appears to treat it as
-   contemporaneous, as covariates typically are in its pretraining data, and adjusts the
-   forecast in the wrong direction. This is the strongest single effect in the whole run and it
-   is negative. The same-session variant (`vxn_log_chg_t0`, added today as the `market_t0`
+   it carries the previous session's volatility move. Removing it improves the loss on
+   average, which is the strongest single effect in the run; finding 5 below shows the effect
+   lives in five volatility-shock weeks, so the mechanism is open. The same-session variant (`vxn_log_chg_t0`, added today as the `market_t0`
    group) was the direct test of whether the lag is to blame; the follow-up section below
    shows it is not.
-2. **Fed news tone is used, a little.** GDELT's Fed-topic tone is the only input whose removal
-   reliably raises the loss. The zero-shot ladder reached the same conclusion from a different
-   angle (the FOMC-tone rung was the only news rung with a consistent gain). Two independent
-   methods pointing at the same narrow source is the most credible "which narrative matters"
-   evidence so far, even though the size is small (0.25% of the loss).
+2. **Fed news tone shows a trace.** GDELT's Fed-topic tone is the only input whose removal
+   raises the loss at the 95% level (0.25% of the loss). The zero-shot ladder saw a similar
+   hint from a *different* variable, the FOMC-statement classifier tone, so the two do not
+   corroborate each other directly; with 42 tests this is a lead to check, not a finding
+   (see finding 6).
 3. **Most inputs are inert zero-shot.** Thirty-nine of forty-two features are
    indistinguishable from noise. This is consistent with the ladder: the pretrained model's
    in-context use of these covariates is weak, and any larger effect has to come from
    fine-tuning.
 4. **Per-horizon** (`summary/permutation-pretrained_by_horizon.png`): the VXN effect is
-   present at every horizon; the Fed-tone effect is concentrated at horizons 1 and 2.
+   strongest at horizons 2 to 4 and near zero at horizon 5; the Fed-tone effect is concentrated
+   at horizons 1 and 2.
+5. **The VXN effect is five weeks, not fifty.** Its median across windows is -0.002 against a
+   mean of -0.013; the five worst windows (origins 2025-07-28, 2025-08-18, 2025-10-07,
+   2025-12-17, 2026-02-17) carry 94% of it, and all are weeks where realised volatility jumped
+   two to three times above the trailing level. In calm weeks the effect is +0.0015 (nothing).
+   The mechanism is therefore not established: the data fit "a calm VXN context narrows the
+   bands, and an unforeseeable shock then punishes them" as well as "the model misreads VXN";
+   a random donor series acts as a regulariser either way.
+6. **Multiplicity.** Forty-two features tested at 95% yield about two false positives by
+   chance, and three cleared the bar. The Fed-tone result (+0.00175) is the size of effect that
+   multiplicity produces and should be reported as a lead, not a finding.
 
 ## Follow-up: is it the lag? (same day)
 
@@ -86,9 +96,10 @@ these series that mapping is wrong more often than right. The only inputs it use
 are the slow calendar structure, days-to-FOMC above all, and (in the 42-feature run) Fed news
 tone.
 
-This reframes the fine-tuning question precisely: the pretrained model has the *wrong prior*
-about what market covariates mean for daily returns. Fine-tuning's job is not to add
-information but to unlearn that prior. The walk-forward ladder with the corrected batch size
+This frames the fine-tuning question: either the pretrained model reads fast market
+covariates wrongly, or their presence narrows its bands ahead of shocks it cannot foresee. In
+both readings fine-tuning's job is to change how these inputs are used, not to add
+information. The walk-forward ladder with the corrected batch size
 will show whether 500 LoRA steps on a few thousand sessions are enough to do so, and the
 permutation tool run on those checkpoints will show whether the sign of the VXN effect flips.
 

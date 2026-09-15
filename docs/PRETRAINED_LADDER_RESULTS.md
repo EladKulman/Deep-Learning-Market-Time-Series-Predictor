@@ -18,7 +18,7 @@ in-context channel from the fine-tuning channel.
 - Folds: validation years 2022, 2023, 2024, 2025, plus Elad's 2025-07 to 2026-06 window. Each
   fold uses all rows from 2017-01-03 up to its start as context. Stride 5, so 50 windows and
   250 daily outcomes per fold, 1,250 outcomes in total.
-- Rungs are cumulative and built from the same 21-feature control as the fine-tuning screen:
+- Rungs are built from the same 21-feature control as the fine-tuning screen. r0 to r3 are cumulative; r4, r5 and r6 are each the control plus one group (23, 25, 25 features), not cumulative, unlike the walk-forward ladder where r5 and r6 are cumulative (27, 31). Rungs:
   `r0_target` (no covariates), `r1_qqq` (6 QQQ transforms), `r2_qqq_calendar` (+6 known-future
   calendar flags), `r3_control` (+9 market and rate signals, the full control),
   `r4_plus_uncertainty` (+EPU, EMU), `r5_plus_fed` (+4 FOMC tone features),
@@ -38,11 +38,11 @@ Mean WQL delta versus the control rung, pooled over the five folds (negative is 
 | r2_qqq_calendar | -0.0020 | [-0.0045, +0.0004] | 46% | best single configuration, not significant |
 | r3_control_nofuture | -0.0015 | [-0.0030, -0.0000] | 50% | calendar flags as past-only beat them as known-future |
 | r1_qqq | -0.0012 | [-0.0041, +0.0015] | 50% | |
-| r5_plus_fed | -0.0009 | [-0.0020, +0.0001] | 54% | the only news source with a consistent (small) gain |
+| r5_plus_fed | -0.0009 | [-0.0020, +0.0001] | 54% | a hint, not significant pooled |
 | r4_plus_uncertainty | +0.0006 | [-0.0003, +0.0016] | 48% | EPU and EMU do nothing zero-shot |
 | r6_plus_gdelt_fed_recession | +0.0008 | [-0.0012, +0.0029] | 54% | GDELT does nothing zero-shot |
 | r7_all_external | +0.0045 | [+0.0004, +0.0088] | 52% | **42 covariates hurt** |
-| r0_target | +0.0047 | [-0.0002, +0.0098] | 44% | the control helps, mostly via 2025 |
+| r0_target | -0.0001 | [-0.0037, +0.0035] | 48% | the 21-feature control adds nothing zero-shot |
 
 Control WQL by fold: 0.689 (2022), 0.683 (2023), 0.704 (2024), 0.713 (2025), 0.692 (2025H2).
 All covariate effects are inside ±0.7% of the control loss.
@@ -62,9 +62,10 @@ All covariate effects are inside ±0.7% of the control loss.
    (pooled -0.0015, interval just excludes zero; significant in the 2025H2 fold). Zero-shot,
    the model does not use "FOMC tomorrow" the way the documentation suggests it could. Whether
    fine-tuning teaches it to is an open question for the walk-forward run.
-4. **Fed tone is the only news input with a consistent zero-shot benefit**, small (-0.0009
-   pooled) and significant only in the 2025H2 fold (-0.0031, 66% of windows). EPU/EMU and
-   GDELT fed/recession are indistinguishable from zero.
+4. **Fed tone is the only news input with a hint of zero-shot benefit**, small (-0.0009
+   pooled, interval touching zero) and significant only in the 2025H2 fold (-0.0031). With
+   eight rungs and five folds tested, one such cell is what chance produces; treat it as a
+   lead, not a finding. EPU/EMU and GDELT fed/recession are indistinguishable from zero.
 5. **Regime matters more than any covariate.** The Gaussian baseline beats every model
    configuration in 2022 (bear market, high volatility) by about 1.3% and loses by 5.4% in
    2025. The pretrained model's 10-90 band covers 76-78% of outcomes against an 80% target,
@@ -89,5 +90,6 @@ was the favourable one for the news inputs.
   window by its own mean absolute return, which inflates quiet weeks and makes the mean of
   window deltas disagree with the aggregate WQL; the intervals here use fold-level
   normalization. Elad's reported intervals should be recomputed the same way.
-- Rungs are cumulative, so each row is the marginal effect of one group on top of the
-  previous ones, not the group in isolation.
+- An earlier version of this document reported r0_target as +0.0047 versus control; that
+  number averaged the target-only and Gaussian rows stacked in the same file. Corrected
+  2026-09-15 (independent review); `scripts/ladder_paired_deltas.py` regenerates the deltas.

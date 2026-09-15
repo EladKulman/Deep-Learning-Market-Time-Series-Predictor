@@ -126,14 +126,40 @@ Run at 4 windows × 1,000 steps (same windows seen) with a control trained ident
 - Coverage of the fine-tuned all-external model is 0.78 to 0.82 across years, in line with
   the other fine-tuned rungs.
 
+## Result 5: where fine-tuning pays (added after the independent review)
+
+Per-window fine-tuning gain (fine-tuned minus pretrained, seeds averaged) split by the
+realised volatility of the forecast week, rungs r3 to r6 pooled, 800 window-rungs
+(`docs/results/walk_forward/gain_by_window_volatility.csv`, `scripts/analyze_gain_conditions.py`):
+
+| Weeks by realised volatility | Gain | 95% interval |
+|---|---:|---|
+| quiet third | **+0.0090** | [+0.0072, +0.0108] |
+| middle third | -0.0021 | [-0.0045, +0.0002] |
+| volatile third | **-0.0104** | [-0.0140, -0.0069] |
+
+Rank correlation of gain with realised volatility is -0.38 to -0.46 on every rung. By horizon,
+the pooled gain is -0.0049 [-0.0068, -0.0030] at one day ahead and within ±0.0015 at days two
+to five. The fine-tuned control beats the zero-mean Gaussian baseline pooled over the four
+years by -0.0109 [-0.0184, -0.0037], losing only in 2022.
+
+**Reading.** LoRA learns one thing: make the bands about 8% wider. That is unconditional, so
+it helps exactly when a week turns out volatile and hurts when it turns out quiet, and the two
+cancel to the near-zero headline gain. It is also why the 2022 bear year shows the largest gain
+and why the earlier "concentrated in 2022" observation was really "concentrated in volatile
+weeks". A fine-tuning that learned *when* to widen would show a gain in both terciles; this
+one does not. The small pretrained-to-fine-tuned change in the 2y-yield input in both 2022
+cells (from -0.0020 to -0.0003, the hiking year) is the only trace of covariate re-weighting.
+
 ## What this means
 
 1. **LoRA fine-tuning on a single index history does not teach Chronos-2 what its covariates
    mean.** At this budget (500 to 1,000 steps, 1,300 to 2,000 sessions) the covariate usage of
    the fine-tuned model is indistinguishable from the pretrained one. The "unlearn the wrong
    prior" hypothesis is rejected.
-2. **What fine-tuning does learn is the return distribution's scale.** Coverage improves on
-   every rung including target-only; the small loss gains follow from that.
+2. **What fine-tuning does learn is the return distribution's scale, unconditionally.**
+   Coverage improves on every rung including target-only; the widening helps in volatile weeks
+   (-0.010) and hurts in quiet ones (+0.009), which is why the headline gain is near zero.
 3. **News sources are inert both before and after fine-tuning**, with the single exception of
    Fed-topic tone, which the pretrained model uses slightly and the fine-tuned model no more.
    Their marginal effects on the loss are null in every year, and the full external set
@@ -152,5 +178,10 @@ Run at 4 windows × 1,000 steps (same windows seen) with a control trained ident
   guidance and already shows tiny seed spread, so more steps alone are unlikely to change the
   conclusion.
 - Permutation importance was run on seed-42 checkpoints only, for three rungs and two years.
+- The one significant per-fold gain (uncertainty rung, 2022, -0.0063) is one of 28 cells and a
+  single window (origin 2022-03-08) carries a third of it; it is a volatility effect, not a
+  covariate effect (Result 5).
+- An independent re-derivation of every number in this document from the raw CSVs is in
+  `docs/results/independent_review_2026-09-15.md`.
 - The all-external rung uses a different step granularity (4 windows × 1,000 steps); compare it
   with the matched 4-window control, not the 8-window one.
