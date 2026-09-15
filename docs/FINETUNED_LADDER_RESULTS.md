@@ -103,6 +103,29 @@ overnight gap, TLT and volume z-score (intervals exclude zero), which the pretra
 was not. The only feature whose removal significantly hurts a fine-tuned checkpoint is the
 distance to the 200-day average (+0.0025 in 2025). Nothing flips sign.
 
+## Result 4: the all-external rung, matched recipe
+
+Run at 4 windows × 1,000 steps (same windows seen) with a control trained identically.
+
+| | 2022 | 2023 | 2024 | 2025 | mean |
+|---|---:|---:|---:|---:|---:|
+| Pretrained, 42 features | 0.6977 | 0.6947 | 0.7026 | 0.7199 | 0.7037 |
+| Fine-tuned, 42 features | 0.6904 | 0.6881 | 0.7026 | 0.7147 | 0.6990 |
+| Fine-tuned control, matched recipe | 0.6885 | 0.6855 | 0.7034 | 0.7135 | 0.6977 |
+| Fine-tuned control, 8-window recipe | 0.6865 | 0.6843 | 0.7021 | 0.7139 | 0.6967 |
+
+- **Largest fine-tuning gain of any rung:** -0.0048 pooled, interval [-0.0106, +0.0008];
+  -0.0073 in 2022 and -0.0066 in 2023. This is the rung on which the pretrained model was hurt
+  most by its inputs, and fine-tuning recovers most of that damage.
+- **No gain over the matched control:** fine-tuned all-external minus fine-tuned matched
+  control is +0.0013 pooled, interval [-0.0012, +0.0039], worse in three of four years.
+  Fine-tuning brings the 42-feature model back to where the 21-feature market-only model
+  already was; the 21 extra news, uncertainty, tone and filing columns add nothing.
+- **Recipe effect is negligible:** the 4-window control differs from the 8-window control by
+  +0.0010 on average, inside its interval, so the comparison is like for like.
+- Coverage of the fine-tuned all-external model is 0.78 to 0.82 across years, in line with
+  the other fine-tuned rungs.
+
 ## What this means
 
 1. **LoRA fine-tuning on a single index history does not teach Chronos-2 what its covariates
@@ -113,7 +136,8 @@ distance to the 200-day average (+0.0025 in 2025). Nothing flips sign.
    every rung including target-only; the small loss gains follow from that.
 3. **News sources are inert both before and after fine-tuning**, with the single exception of
    Fed-topic tone, which the pretrained model uses slightly and the fine-tuned model no more.
-   Their marginal effects on the loss are null in every year.
+   Their marginal effects on the loss are null in every year, and the full external set
+   fine-tuned with a matched recipe is no better than the market-only control.
 4. **The regime matters more than any input or any training.** The 2022 bear year is where
    fine-tuning with covariates gains the most and where the naive Gaussian beats every model.
 5. The earlier screen's "all external beats control by 0.6%" was training noise: with the
