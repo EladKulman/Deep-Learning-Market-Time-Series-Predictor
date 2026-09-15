@@ -24,9 +24,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-CELL = re.compile(r"^(?P<rung>.+)-fold(?P<fold>[^-]+)-(?P<arm>pretrained|seed\d+)$")
+CELL = re.compile(r"^(?P<rung>.+)-fold(?P<fold>[^-]+)-(?P<arm>pretrained|seed\d+)(?P<suffix>-[A-Za-z0-9]+)?$")
 RUNG_ORDER = ["r0_target", "r1_qqq", "r2_qqq_calendar", "r3_qqq_calendar_market", "r4_plus_uncertainty",
-              "r5_plus_fed", "r6_plus_gdelt_fed_recession", "r7_all_external"]
+              "r5_plus_fed", "r6_plus_gdelt_fed_recession", "r7_all_external",
+              "r3_qqq_calendar_market-bw4", "r7_all_external-bw4"]
 
 
 def per_window_loss(frame: pd.DataFrame) -> pd.Series:
@@ -50,7 +51,7 @@ def load_runs(roots: list[Path]) -> pd.DataFrame:
             if not match:
                 continue
             frame = pd.read_csv(path)
-            fold, rung, arm = match["fold"], match["rung"], match["arm"]
+            fold, rung, arm = match["fold"], match["rung"] + (match["suffix"] or ""), match["arm"]
             denominator = frame.loc[frame["model"] == frame["model"].iloc[0], "actual"].abs().mean()
             for model, g in frame.groupby("model"):
                 if arm == "pretrained" and model == "fine_tuned":
