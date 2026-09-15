@@ -58,6 +58,29 @@ def trading_days(start: str, end: str) -> pd.DatetimeIndex:
     return pd.DatetimeIndex(schedule.index).normalize()
 
 
+def _month_number(text: str) -> int | None:
+    key = text.split("/")[-1].strip().lower()
+    return next((n for m, n in MONTHS.items() if m.startswith(key[:3])), None) if key else None
+
+
+def parse_meeting_heading(label: str, year: int) -> pd.Timestamp | None:
+    """Return the meeting END date from a historical-page heading.
+
+    Handles "January 30-31 Meeting", "Jan/Feb 31-1 Meeting" (month pair, end day after the
+    dash) and the cross-month "July 31-August 1 Meeting" form (end month named explicitly).
+    The statement is released on the last day of a two-day meeting, so the end date is the
+    event date.
+    """
+    match = re.match(r"([A-Za-z/]+)\s+(\d{1,2})(?:\s*-\s*(?:([A-Za-z]+)\s+)?(\d{1,2}))?", label.strip())
+    if not match:
+        return None
+    start_month, first, end_month_text, last = match.groups()
+    month = _month_number(end_month_text) if end_month_text else _month_number(start_month)
+    if month is None:
+        return None
+    return pd.Timestamp(year=year, month=month, day=int(last or first))
+
+
 def scheduled_fomc_from_fed_page(cache_dir: Path = Path("data/raw/calendar"), cached: bool = False) -> list[pd.Timestamp]:
     """Parse meeting end dates from the Fed calendar page (covers recent and upcoming years)."""
     path = cache_dir / "fomccalendars.htm"
@@ -106,11 +129,9 @@ def scheduled_fomc_from_fed_page(cache_dir: Path = Path("data/raw/calendar"), ca
             label = heading.get_text(" ", strip=True)
             if "Meeting" not in label or "unscheduled" in label.lower():
                 continue
-            match = re.match(r"([A-Za-z/]+)\s+(\d+)(?:-(\d+))?", label)
-            if match:
-                month, first, last = match.groups()
-                month_number = next(n for m, n in MONTHS.items() if m.startswith(month.split("/")[-1][:3].lower()))
-                dates.append(pd.Timestamp(year=year, month=month_number, day=int(last or first)))
+            parsed = parse_meeting_heading(label, year)
+            if parsed is not None:
+                dates.append(parsed)
     if not dates:
         raise ValueError("No scheduled FOMC meetings parsed")
     logging.info("Scheduled FOMC meetings: %d (%s -> %s)", len(set(dates)), min(dates).date(), max(dates).date())

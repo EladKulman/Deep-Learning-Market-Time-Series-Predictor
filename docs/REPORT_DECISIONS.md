@@ -238,6 +238,70 @@ model's uncertainty should have been higher.
 
 ---
 
+## 13. Review of the first modeling round (2026-09-15)
+
+Independent code review of commits e86e689 and 25d865f (data and modeling sides), with the
+key claims re-verified by hand. **Write** the confirmed parts in the methods section and the
+caveats in the limitations section.
+
+**Confirmed sound.** Feature selection by profile/group/explicit list with role validation;
+known-future columns go through `known_covariates_names` and only into the future block;
+chronological split with LoRA trained strictly on rows before the validation period and no
+checkpoint selection on validation; rolling 50 non-overlapping five-session windows with a
+strictly trailing 60-session Gaussian baseline; WQL implemented as the standard
+2 * sum(pinball) / (Q * sum|y|); paired-window bootstrap; SEC acceptance times now mapped to
+the first NYSE close after acceptance (the old UTC-hour comparison was a real bug); CPI
+revisions now enter on their publication date; two missed 'b'-suffix FOMC statements
+(2008-01-22, 2008-12-16) recovered; emergency meetings excluded from the known-future flag.
+
+**Must fix before further runs.**
+1. *Effective batch size was one window.* Chronos-2 counts target plus covariate rows toward
+   `batch_size`; with 22 to 43 rows per window and `train_batch_size=8` every optimizer step
+   used exactly one randomly sampled window (verified in chronos 2.3.2 `dataset.py`). All 18
+   fits were 200 single-window updates at lr 1e-5, which explains why LoRA barely moved WQL
+   (0.6907 to 0.6894) and why seed spread (std 0.0036 to 0.0052) exceeds most treatment deltas.
+   Set `train_batch_size` to at least four times the number of variates (e.g. 128 for 23
+   variates) and use 500 or more steps.
+2. *FOMC date parsing bug:* the 2012 heading "July 31-August 1" is parsed as 2012-07-31; the
+   statement was 2012-08-01. Verified in the table.
+3. *Rate lags re-checked and confirmed correct (2026-09-15):* the H.15 series (DFF, DGS2,
+   DGS10, DFII10) are attached two sessions late because the Fed posts day T's values at
+   16:15 ET on T+1, after that session's close; the Treasury-sourced T10Y2Y and T5YIE post the
+   same evening and are one session late. The apparent inconsistency is the sources' own
+   publication schedules. A same-day 2y/10y from treasury.gov would be a data improvement.
+4. *VXN one-session lag is a judgment call, not a fact.* CBOE settles index closes at 16:15 ET,
+   but the 16:00 value is observable and nearly identical; the lag discards the strongest
+   same-day volatility signal (the 2020-03-16 row carries 51.8 instead of 80.1). Make it an
+   ablation arm, not a silent default.
+
+**Results status.** The screen results are not yet reportable as findings beyond "no reliable
+effect":
+- The GDELT topic ranking is one seed compared against the seed-42 control, which was the
+  worst of the three control seeds; against the control mean the six topic gains compress to
+  0.7 to 1.0% and become indistinguishable from an unlucky control draw.
+- Eleven treatments were compared to one control with no multiplicity correction; the same
+  per-run interval that now calls all six topics significant called EPU significant at seed 42
+  before it failed at seeds 43 and 44.
+- Directional accuracy of 56 to 58% equals the up-day base rate of the validation year (the
+  zero-forecast baseline scores 57.2%); it must be reported against that base rate.
+- The aggregate all_external-versus-control confidence interval is quoted in the changelog
+  but not printed in the results document.
+- Run artifacts live in the ignored `models/` directory; nothing in the docs can be regenerated
+  without the cluster.
+
+**What the round does establish.** Most of the covariate gain appears in the *pretrained*
+model given the covariates in context, before any fine-tuning; twelve GDELT columns at once
+do worse than any single topic; the news effect is small relative to training noise. All three
+are findings about model dynamics and belong in the report.
+
+**Refocus (agreed 2026-09-15).** The research question is which inputs change the model's
+behaviour and when, not whether the forecast beats the market. Planned tools: leave-one-out
+from the all-external model; permutation importance at inference (no retraining; per-window
+scores give importance over time); walk-forward folds over 2022 to 2025 for regime diversity;
+per-horizon effects from the saved predictions; seeds 42 to 47 for the finalists.
+
+---
+
 ## Changelog
 - **2026-09-07** Research brief completed; Chronos-2 facts, source verdicts, leakage rules recorded (sections 1, 3, 4, 5).
 - **2026-09-07** Data layer rebuilt: new fetchers, FOMC scraper fixed (94 to 168), tone classifier, calendar, publication-aware builder, no zero-fill policy (sections 4, 6, 7).
@@ -253,4 +317,5 @@ model's uncertainty should have been higher.
 - **2026-09-09** TAU Slurm array `869989` completed the six-setup seed-42 news screen; array `871482` completed control, EPU/EMU, and all-external repeats at seeds 43 and 44. All-external led across seeds with mean WQL 0.689439 versus 0.693582 for control (0.60% lower), mean MAE 0.008420 versus 0.008467, and 57.47% versus 56.67% direction. It won two of three seeds, while the aggregate paired-window 95% interval (-0.010021, 0.001424) still crossed zero. EPU/EMU's strong seed-42 result did not repeat. See `docs/NEWS_ABLATION_RESULTS.md`.
 - **2026-09-09** Historical experiment jobs now freeze the readiness timestamp to the September 4 feature snapshot. This avoids wall-clock failures after a new trading session while preserving the strict current-date gate for live forecasts. The successful robustness job requested 6 GB host RAM after a 24 GB request was blocked by other allocations.
 - **2026-09-10** TAU Slurm array `874192` completed six single-topic GDELT fits from the pinned Chronos-2 base, each using the common 21 controls plus one topic's share and tone. All six beat the seed-42 fine-tuned control on WQL. Fed ranked first at 0.686526 (1.28% below control), narrowly ahead of recession at 0.686796; their direct paired interval crossed zero. Repeat both with seeds 43 and 44 before selecting a topic. See `docs/GDELT_TOPIC_RESULTS.md`.
-- *(next: repeat Fed and recession with seeds 43 and 44; continue the remaining GDELT tail refresh; reserve a future untouched test block)*
+- **2026-09-15** Independent review of the first modeling round (section 13): pipeline sound; effective LoRA batch was one window (batch_size counts covariate rows); 2012-08-01 FOMC mis-dated (fixed same day); rate lags confirmed correct on re-check; VXN lag made an ablation arm (market_t0 group); screen results not yet reportable beyond "no reliable effect". Research focus restated as feature dynamics: leave-one-out, permutation importance over time, walk-forward folds.
+- *(next: fix batch size and the two data issues, then rerun control and finalists with seeds 42-47; permutation importance on the all-external model; walk-forward folds)*

@@ -95,10 +95,33 @@ def parse_args() -> argparse.Namespace:
         help="Number of optimizer steps.",
     )
     parser.add_argument(
+        "--train-batch-windows",
+        type=int,
+        default=None,
+        help=(
+            "Windows per optimizer step (default 8, smoke 2). Chronos-2 counts the target plus "
+            "every covariate row toward batch_size, so the batch_size passed to fit() is "
+            "train_batch_windows * (1 + number of covariates)."
+        ),
+    )
+    parser.add_argument(
         "--batch-size",
         type=int,
         default=None,
-        help="Chronos-2 batch size measured in target plus covariate series.",
+        help=(
+            "Explicit Chronos-2 batch_size in series rows (overrides --train-batch-windows). "
+            "Values below one window's variate count train on a single window per step."
+        ),
+    )
+    parser.add_argument(
+        "--select-on-validation",
+        action="store_true",
+        help=(
+            "Pass the validation split to fit() so Chronos-2 keeps the checkpoint with the best "
+            "validation loss. Off by default: that is model selection on the split you then "
+            "report, which biases validation metrics. Use only for hyperparameter search on a "
+            "split you will not report."
+        ),
     )
     parser.add_argument(
         "--device-map",
@@ -147,8 +170,8 @@ def apply_mode_defaults(args: argparse.Namespace) -> argparse.Namespace:
         "context_length": 64 if args.smoke_test else 512,
         "validation_fraction": 0.2 if args.smoke_test else 0.15,
         "learning_rate": 1e-5,
-        "num_steps": 5 if args.smoke_test else 200,
-        "batch_size": 8 if args.smoke_test else 64,
+        "num_steps": 5 if args.smoke_test else 500,
+        "train_batch_windows": 2 if args.smoke_test else 8,
         "max_rows": 384 if args.smoke_test else None,
     }
     for name, value in defaults.items():
@@ -157,6 +180,19 @@ def apply_mode_defaults(args: argparse.Namespace) -> argparse.Namespace:
     return args
 
 
+
+
+def effective_batch_size(args: argparse.Namespace, num_features: int) -> int:
+    """Chronos-2 batch_size counts target + covariate rows; one window = 1 + num_features rows."""
+    variates = 1 + num_features
+    if args.batch_size is not None:
+        if args.batch_size < variates:
+            print(
+                f"WARNING: --batch-size {args.batch_size} is smaller than one window's "
+                f"{variates} variates; every optimizer step will see a single window."
+            )
+        return args.batch_size
+    return args.train_batch_windows * variates
 
 
 def load_modeling_frame(args: argparse.Namespace) -> pd.DataFrame:
@@ -242,7 +278,14 @@ def print_training_plan(
     print(f"  prediction_length: {args.prediction_length}")
     print(f"  context_length: {args.context_length}")
     print(f"  num_steps: {args.num_steps}")
-    print(f"  batch_size: {args.batch_size}")
+    print(f"  learning_rate: {args.learning_rate}")
+    variates = 1 + len(feature_columns)
+    print(
+        f"  effective batch: {args.effective_batch_size / variates:g} windows x {variates} variates = "
+        f"{args.effective_batch_size} rows (train_batch_windows={args.train_batch_windows}, "
+        f"batch_size override={args.batch_size})"
+    )
+    print(f"  select_on_validation: {args.select_on_validation}")
     print(f"  finetune_mode: {args.finetune_mode}")
     print(f"  device_map: {args.device_map}")
 
@@ -264,7 +307,11 @@ def write_metadata(
         "finetune_mode": args.finetune_mode,
         "learning_rate": args.learning_rate,
         "num_steps": args.num_steps,
-        "batch_size": args.batch_size,
+        "train_batch_windows": getattr(args, "train_batch_windows", None),
+        "batch_size_override": args.batch_size,
+        "batch_size": getattr(args, "effective_batch_size", args.batch_size),
+        "variates_per_window": 1 + len(feature_columns),
+        "select_on_validation": getattr(args, "select_on_validation", False),
         "smoke_test": args.smoke_test,
         "max_rows": args.max_rows,
         "train_rows": len(train_frame),
@@ -296,6 +343,7 @@ def main() -> None:
     args = apply_mode_defaults(parse_args())
     frame = load_modeling_frame(args)
     resolved_features, args.known_covariates_names = select_features(frame, args)
+    args.effective_batch_size = effective_batch_size(args, len(resolved_features))
 
     train_frame, validation_frame = chronological_split(
         frame=frame,
@@ -324,9 +372,11 @@ def main() -> None:
         prediction_length=args.prediction_length,
         known_covariates_names=args.known_covariates_names,
     )
+    # Only hand the validation split to fit() when explicitly requested: Chronos-2 then
+    # enables load_best_model_at_end, i.e. checkpoint selection on the reported split.
     validation_inputs = (
         None
-        if validation_frame is None
+        if validation_frame is None or not args.select_on_validation
         else to_chronos_inputs(
             validation_frame,
             target_column=args.target_column,
@@ -348,7 +398,7 @@ def main() -> None:
         finetune_mode=args.finetune_mode,
         learning_rate=args.learning_rate,
         num_steps=args.num_steps,
-        batch_size=args.batch_size,
+        batch_size=args.effective_batch_size,
         context_length=args.context_length,
         min_past=args.min_past,
         output_dir=args.output_dir,

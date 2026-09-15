@@ -22,7 +22,8 @@ import pandas as pd
 
 SAME_DAY_OK = {"overnight_gap", "parkinson_vol_1d", "qqq_minus_spy", "smh_minus_qqq", "iwm_minus_spy",
                "tlt_log_ret", "hyg_log_ret", "gld_log_ret", "volume_z_20d", "volume_change_1d",
-               "mom_21d", "mom_63d", "dist_50dma", "dist_200dma", "volatility_20d", "parkinson_vol_22d"}
+               "mom_21d", "mom_63d", "dist_50dma", "dist_200dma", "volatility_20d", "parkinson_vol_22d",
+               "vxn_log_chg_t0", "vix_term_ratio_t0"}  # market_t0: deliberately same-session CBOE values
 
 
 def audit_file(path: Path) -> None:

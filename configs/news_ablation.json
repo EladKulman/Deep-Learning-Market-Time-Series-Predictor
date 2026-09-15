@@ -1,5 +1,5 @@
 {
-  "description": "Common-control Chronos-2 LoRA screen for external news and event sources.",
+  "description": "Common-control Chronos-2 LoRA screen for external news and event sources. train_batch_windows is windows per optimizer step; Chronos-2 batch_size = windows * (1 + covariates).",
   "model_id": "amazon/chronos-2",
   "model_revision": "29ec3766d36d6f73f0696f85560a422f50e8498c",
   "start_date": "2017-01-03",
@@ -8,9 +8,9 @@
   "context_length": 512,
   "validation_rows": 252,
   "stride": 5,
-  "num_steps": 200,
-  "learning_rate": 0.00001,
-  "train_batch_size": 8,
+  "num_steps": 500,
+  "learning_rate": 1e-05,
+  "train_batch_windows": 8,
   "eval_batch_size": 8,
   "seed": 42,
   "primary_metric": "weighted_quantile_loss",
@@ -44,7 +44,10 @@
     },
     "uncertainty": {
       "description": "Control plus daily EPU and EMU uncertainty.",
-      "add_features": ["epu_log", "emu_log"]
+      "add_features": [
+        "epu_log",
+        "emu_log"
+      ]
     },
     "fomc_tone": {
       "description": "Control plus classifier-derived FOMC tone state and change.",
@@ -57,7 +60,11 @@
     },
     "sec_disclosures": {
       "description": "Control plus Nasdaq leader earnings and SEC filing activity.",
-      "add_features": ["ndx_earnings_count", "sec_8k_count", "sec_total_filings"]
+      "add_features": [
+        "ndx_earnings_count",
+        "sec_8k_count",
+        "sec_total_filings"
+      ]
     },
     "gdelt_all": {
       "description": "Control plus GDELT share and tone for all six topics.",
@@ -78,7 +85,10 @@
     },
     "gdelt_ai": {
       "description": "Control plus GDELT AI news share and tone only.",
-      "add_features": ["gdelt_ai_news_share", "gdelt_ai_avg_tone"]
+      "add_features": [
+        "gdelt_ai_news_share",
+        "gdelt_ai_avg_tone"
+      ]
     },
     "gdelt_semiconductor": {
       "description": "Control plus GDELT semiconductor news share and tone only.",
@@ -89,7 +99,10 @@
     },
     "gdelt_fed": {
       "description": "Control plus GDELT Federal Reserve news share and tone only.",
-      "add_features": ["gdelt_fed_news_share", "gdelt_fed_avg_tone"]
+      "add_features": [
+        "gdelt_fed_news_share",
+        "gdelt_fed_avg_tone"
+      ]
     },
     "gdelt_inflation": {
       "description": "Control plus GDELT inflation news share and tone only.",
@@ -114,7 +127,12 @@
     },
     "all_external": {
       "description": "Control plus uncertainty, FOMC tone, SEC disclosures, and all GDELT topics.",
-      "include_setups": ["uncertainty", "fomc_tone", "sec_disclosures", "gdelt_all"]
+      "include_setups": [
+        "uncertainty",
+        "fomc_tone",
+        "sec_disclosures",
+        "gdelt_all"
+      ]
     }
   }
 }

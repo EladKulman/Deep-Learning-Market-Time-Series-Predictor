@@ -26,6 +26,7 @@ return. An origin at the close of T predicts subsequent session returns, not T i
 |---|---|
 | QQQ and US cross-asset ETFs | Same session's close; 2005 QQQ history supplies rolling warm-up. |
 | CBOE VIX/VXN/term ratios/VVIX | Prior calendar day's observation, then as-of join. Daily values can finalize after the 16:00 ET cutoff. This also covers next-day FRED backfills. |
+| CBOE same-session variants (`market_t0` group: `vxn_log_chg_t0`, `vix_term_ratio_t0`) | Day-T CBOE close, no lag. The 16:00 ET index value is observable even though CBOE finalizes the close at 16:15, so the one-session lag above is a conservative choice, not a fact; these two columns exist so the lag can be ablated. Never combine both versions in one run. |
 | Yahoo oil and dollar index | One-day conservative lag because daily-bar cutoff is not guaranteed before the NYSE close. |
 | FRED H.15: DFF, DGS2, DGS10, DFII10 | Publication is after the next federal business day’s close. Use the first NYSE session after that release, accounting for federal holidays and early closes. |
 | FRED spreads: T10Y2Y, T5YIE | Before June 21, 2019 use the H.15 rule. Thereafter direct Treasury sourcing supports same-evening publication, available at the next NYSE close. The legacy `t10y2y_lag1` name remains. |
@@ -43,6 +44,7 @@ The fetcher writes `sec_filings_daily.metadata.json`; the builder rejects legacy
 ## Repairs and remaining coverage
 
 | Area | Status and limit |
+| FOMC 2012 heading (2026-09-15) | The historical page's cross-month heading "July 31-August 1 Meeting" was parsed as 2012-07-31; the statement was 2012-08-01. `parse_meeting_heading` now uses the explicitly named end month; unit-tested for both heading forms. |
 |---|---|
 | Price rolling warm-up | Filled with 2005 observations before trimming the modeling sample. |
 | Fed statements | 170 statements. Added January 22 and December 16, 2008 (`b` URLs); corrected June 2007's URL typo to the printed June 28 date. Cached non-policy exclusions make offline replay complete. |

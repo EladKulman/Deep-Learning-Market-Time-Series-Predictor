@@ -2,9 +2,9 @@
   "profile": "full",
   "start": "2006-01-01",
   "rows": 5201,
-  "table_sha256": "e0c8d48b38059eb70d9f91931bff68678dbcc46aeadab1502ded1b9ee11df037",
-  "groups_sha256": "d0933780c2ef78575046f3da51cb2dcd9f3c2b1ac5a0a1fa1c5721add848d4b8",
-  "builder_sha256": "7beb3e027a292db4ae1f15d3b4657d8bb22efee69398f23b03d2c0fbfbb8dc24",
+  "table_sha256": "b3beb046933b15f1f75c098bfa6df30af4106395302ea4d8b68711322a262e34",
+  "groups_sha256": "85783f4158d631d06e5c3b98ed0f0ee36e3b02dc59a1c7c56faf8af7277c97b1",
+  "builder_sha256": "0855b12b596ef0ee7021d7c8e19477eed6a06e0d873981536ebeb166d522a802",
   "source_sha256": {
     "qqq_ohlcv_daily.csv": "0f59e2b3241127e38b1b42ac856fe501af26a7d6a01243ed6ea99cd10724bbfe",
     "cboe_vol_daily.csv": "73670f8e3f5289116fe62b7071829bfb7e036c2a9f65d138879d0018ff0cc369",
@@ -15,6 +15,6 @@
     "fomc_events_daily.csv": "52dd04b29c9ebd489be1222848bb8e63e366ceb404cccc822cefd4f2e5d6a23b",
     "fomc_tone_daily.csv": "fa75011a546a715d55d7c76ce2ed0b180023996b860a1018907a49eb259567fe",
     "sec_filings_daily.csv": "1782b064abfaf07a7386b4b4a3d03e74db4007b64996047d651ce30851bf99bb",
-    "event_calendar_daily.csv": "a4db2f18184d764e6017ca773edca0ebec3fc24cda7c3e916e8c24a2168a12f3"
+    "event_calendar_daily.csv": "ed92ed848dc77f7ef7227f11df01972136e4d6487057fd27500011a4d6ba102b"
   }
 }

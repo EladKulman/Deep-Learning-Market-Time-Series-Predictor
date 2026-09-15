@@ -91,6 +91,14 @@
     "group": "market",
     "role": "past"
   },
+  "vxn_log_chg_t0": {
+    "group": "market_t0",
+    "role": "past"
+  },
+  "vix_term_ratio_t0": {
+    "group": "market_t0",
+    "role": "past"
+  },
   "tlt_log_ret": {
     "group": "market",
     "role": "past"

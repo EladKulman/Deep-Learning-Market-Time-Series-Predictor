@@ -16,7 +16,7 @@ from fetch_gdelt_news import merge_cache
 from compare_chronos2_validation import prepare_modeling_frame, build_validation_windows, gaussian_baseline, metric_row
 from chronos_data import forecast_input, training_inputs
 from predict_chronos2 import make_forecast_dates
-from build_event_calendar import scheduled_fomc_from_fed_page
+from build_event_calendar import scheduled_fomc_from_fed_page, parse_meeting_heading
 from check_data_readiness import session_window, calendar_horizon, check_build_snapshot
 from chronos_data import fingerprint
 from fetch_fomc_statements import fetch_statements
@@ -88,6 +88,16 @@ class DataContractTests(unittest.TestCase):
 
     def test_printed_fed_date_overrides_url_typo(self):
         self.assertEqual(release_date("June 28, 2007 For immediate release...", "2007-06-18"), "2007-06-28")
+
+    def test_meeting_heading_uses_end_date_including_cross_month_form(self):
+        self.assertEqual(parse_meeting_heading("July 31-August 1  Meeting - 2012", 2012), pd.Timestamp("2012-08-01"))
+        self.assertEqual(parse_meeting_heading("Jan/Feb 31-1 Meeting - 2011", 2011), pd.Timestamp("2011-02-01"))
+        self.assertEqual(parse_meeting_heading("January 30-31 Meeting - 2007", 2007), pd.Timestamp("2007-01-31"))
+        self.assertEqual(parse_meeting_heading("December 16 Meeting - 2008", 2008), pd.Timestamp("2008-12-16"))
+        self.assertIsNone(parse_meeting_heading("Meeting minutes", 2008))
+        dates = scheduled_fomc_from_fed_page(cached=True)
+        self.assertIn(pd.Timestamp("2012-08-01"), dates)
+        self.assertNotIn(pd.Timestamp("2012-07-31"), dates)
 
     def test_scheduled_calendar_excludes_emergency_and_notation_votes(self):
         dates = scheduled_fomc_from_fed_page(cached=True)

@@ -56,7 +56,7 @@ def comparison_command(args: argparse.Namespace, plan: dict, features: list[str]
         "--stride", str(plan["stride"]),
         "--num-steps", str(plan["num_steps"]),
         "--learning-rate", str(plan["learning_rate"]),
-        "--train-batch-size", str(plan["train_batch_size"]),
+        "--train-batch-windows", str(plan["train_batch_windows"]),
         "--eval-batch-size", str(plan["eval_batch_size"]),
         "--seed", str(seed),
         "--device-map", args.device_map,

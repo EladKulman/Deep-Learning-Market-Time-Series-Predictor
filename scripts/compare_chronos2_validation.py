@@ -136,10 +136,23 @@ def parse_args() -> argparse.Namespace:
         help="Fine-tuning optimizer steps.",
     )
     parser.add_argument(
+        "--train-batch-windows",
+        type=int,
+        default=None,
+        help=(
+            "Fine-tuning windows per optimizer step (default 8, smoke 2). Chronos-2 counts the "
+            "target plus every covariate row toward its batch_size, so the effective batch_size "
+            "passed to fit() is train_batch_windows * (1 + number of covariates)."
+        ),
+    )
+    parser.add_argument(
         "--train-batch-size",
         type=int,
         default=None,
-        help="Fine-tuning batch size.",
+        help=(
+            "Explicit Chronos-2 batch_size in series rows (overrides --train-batch-windows). "
+            "Values below one window's variate count train on a single window per step."
+        ),
     )
     parser.add_argument(
         "--eval-batch-size",
@@ -182,8 +195,8 @@ def apply_mode_defaults(args: argparse.Namespace) -> argparse.Namespace:
         "max_context_rows": 128 if args.smoke_test else None,
         "max_windows": 5 if args.smoke_test else None,
         "learning_rate": 1e-5,
-        "num_steps": 5 if args.smoke_test else 200,
-        "train_batch_size": 8 if args.smoke_test else 64,
+        "num_steps": 5 if args.smoke_test else 500,
+        "train_batch_windows": 2 if args.smoke_test else 8,
         "eval_batch_size": 8 if args.smoke_test else 64,
     }
     for name, value in defaults.items():
@@ -194,6 +207,19 @@ def apply_mode_defaults(args: argparse.Namespace) -> argparse.Namespace:
     return args
 
 
+
+
+def effective_train_batch_size(args: argparse.Namespace, num_features: int) -> int:
+    """Chronos-2 batch_size counts target + covariate rows; one window = 1 + num_features rows."""
+    variates = 1 + num_features
+    if args.train_batch_size is not None:
+        if args.train_batch_size < variates:
+            print(
+                f"WARNING: --train-batch-size {args.train_batch_size} is smaller than one window's "
+                f"{variates} variates; every optimizer step will see a single window."
+            )
+        return args.train_batch_size
+    return args.train_batch_windows * variates
 
 
 def parse_quantiles(raw_value: str) -> list[float]:
@@ -462,7 +488,10 @@ def write_metadata(
         "finetune_mode": args.finetune_mode,
         "learning_rate": args.learning_rate,
         "num_steps": args.num_steps,
-        "train_batch_size": args.train_batch_size,
+        "train_batch_windows": args.train_batch_windows,
+        "train_batch_size_override": args.train_batch_size,
+        "effective_train_batch_size": args.effective_train_batch_size,
+        "variates_per_window": 1 + len(feature_columns),
         "eval_batch_size": args.eval_batch_size,
         "train_rows": len(train_frame),
         "validation_rows_actual": len(validation_frame),
@@ -502,7 +531,14 @@ def print_plan(
     print(f"  context_length: {args.context_length}")
     print(f"  max_context_rows: {args.max_context_rows}")
     print(f"  finetune_steps: {args.num_steps}")
-    print(f"  train_batch_size: {args.train_batch_size}")
+    print(f"  learning_rate: {args.learning_rate}")
+    variates = 1 + len(feature_columns)
+    windows = args.effective_train_batch_size / variates
+    print(
+        f"  effective batch: {windows:g} windows x {variates} variates = "
+        f"{args.effective_train_batch_size} rows (train_batch_windows={args.train_batch_windows}, "
+        f"train_batch_size override={args.train_batch_size})"
+    )
     print(f"  eval_batch_size: {args.eval_batch_size}")
     print(f"  device_map: {args.device_map}")
 
@@ -513,6 +549,7 @@ def main() -> None:
 
     raw_frame = load_frame(args.data, args.timestamp_column, args.target_column)
     feature_columns, args.known_covariates_names = select_features(raw_frame, args)
+    args.effective_train_batch_size = effective_train_batch_size(args, len(feature_columns))
 
     frame = prepare_modeling_frame(
         frame=raw_frame,
@@ -599,7 +636,7 @@ def fine_tuned_predictions(base_pipeline, args, train_frame, feature_columns, va
         finetune_mode=args.finetune_mode,
         learning_rate=args.learning_rate,
         num_steps=args.num_steps,
-        batch_size=args.train_batch_size,
+        batch_size=args.effective_train_batch_size,
         context_length=args.context_length,
         min_past=args.min_past,
         output_dir=args.output_dir / "finetuned",
@@ -613,7 +650,7 @@ def fine_tuned_predictions(base_pipeline, args, train_frame, feature_columns, va
     from fine_tune_chronos2 import write_metadata as write_fine_tuning_metadata
     from copy import copy
     training_args = copy(args)
-    training_args.batch_size = args.train_batch_size
+    training_args.batch_size = args.effective_train_batch_size
     write_fine_tuning_metadata(args.output_dir / "finetuned", training_args, feature_columns, train_frame, None)
     return predict_validation_windows(
         pipeline=finetuned_pipeline,

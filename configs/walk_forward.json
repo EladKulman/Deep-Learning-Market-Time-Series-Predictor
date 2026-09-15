@@ -1,0 +1,42 @@
+{
+  "description": "Walk-forward covariate ladder for Chronos-2 on QQQ. Each fold trains on all sessions from sample_start up to the last session before the validation year and evaluates every fifth session of that calendar year (stride 5, five-session horizon). Rungs are cumulative: each adds one feature group to the previous rung, so the difference between consecutive rungs is the marginal value of that group in that year. The sample starts 2017-01-03 for every fold so GDELT exists throughout; the 2022 fold therefore trains on only about 1,250 sessions and the 2025 fold on about 2,000. The 2025 fold uses the 2025 calendar year for consistency with the other folds; it overlaps but does not equal the 2025-07 to 2026-06 window used by configs/news_ablation.json. Effective Chronos-2 batch_size = train_batch_windows * (1 + covariates).",
+  "model_id": "amazon/chronos-2",
+  "model_revision": "29ec3766d36d6f73f0696f85560a422f50e8498c",
+  "sample_start": "2017-01-03",
+  "folds": {
+    "2022": {"validation_start": "2022-01-01", "validation_end": "2022-12-31"},
+    "2023": {"validation_start": "2023-01-01", "validation_end": "2023-12-31"},
+    "2024": {"validation_start": "2024-01-01", "validation_end": "2024-12-31"},
+    "2025": {"validation_start": "2025-01-01", "validation_end": "2025-12-31"}
+  },
+  "prediction_length": 5,
+  "context_length": 512,
+  "stride": 5,
+  "num_steps": 500,
+  "learning_rate": 0.00001,
+  "train_batch_windows": 8,
+  "eval_batch_size": 8,
+  "seeds": [42, 43, 44],
+  "primary_metric": "weighted_quantile_loss",
+  "feature_groups": {
+    "qqq": ["overnight_gap", "parkinson_vol_1d", "parkinson_vol_22d", "volume_z_20d", "mom_21d", "dist_200dma"],
+    "calendar": ["is_fomc_day", "is_cpi_day", "is_nfp_day", "days_to_fomc", "days_to_month_end", "is_opex_week"],
+    "market": ["vxn_log_chg", "vxn_minus_vix", "vix_term_ratio", "tlt_log_ret", "hyg_log_ret"],
+    "rates": ["d_dgs2_bp", "t10y2y_lag1", "d_dfii10_bp", "cpi_yoy"],
+    "uncertainty": ["epu_log", "emu_log"],
+    "fed": ["fomc_net_hawkish_last", "fomc_net_hawkish_ewma", "fomc_tone_change_last", "days_since_fomc"],
+    "gdelt_fed_recession": ["gdelt_fed_news_share", "gdelt_fed_avg_tone", "gdelt_recession_news_share", "gdelt_recession_avg_tone"],
+    "sec": ["ndx_earnings_count", "sec_8k_count", "sec_total_filings"],
+    "gdelt_rest": ["gdelt_ai_news_share", "gdelt_ai_avg_tone", "gdelt_semiconductor_news_share", "gdelt_semiconductor_avg_tone", "gdelt_inflation_news_share", "gdelt_inflation_avg_tone", "gdelt_big_tech_earnings_news_share", "gdelt_big_tech_earnings_avg_tone"]
+  },
+  "rungs": {
+    "r0_target": {"description": "Target only, no covariates.", "groups": []},
+    "r1_qqq": {"description": "QQQ-derived transforms.", "groups": ["qqq"]},
+    "r2_qqq_calendar": {"description": "Plus known-future calendar flags.", "groups": ["qqq", "calendar"]},
+    "r3_qqq_calendar_market": {"description": "Plus market and rates controls (= the 21-feature control of the news screen).", "groups": ["qqq", "calendar", "market", "rates"]},
+    "r4_plus_uncertainty": {"description": "Plus daily EPU/EMU.", "groups": ["qqq", "calendar", "market", "rates", "uncertainty"]},
+    "r5_plus_fed": {"description": "Plus classifier-derived FOMC tone.", "groups": ["qqq", "calendar", "market", "rates", "uncertainty", "fed"]},
+    "r6_plus_gdelt_fed_recession": {"description": "Plus GDELT Fed and recession share/tone.", "groups": ["qqq", "calendar", "market", "rates", "uncertainty", "fed", "gdelt_fed_recession"]},
+    "r7_all_external": {"description": "Every source: control plus uncertainty, FOMC tone, SEC activity, and all six GDELT topics (matches news_ablation all_external).", "groups": ["qqq", "calendar", "market", "rates", "uncertainty", "fed", "gdelt_fed_recession", "sec", "gdelt_rest"]}
+  }
+}

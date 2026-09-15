@@ -173,6 +173,14 @@ def build(input_dir: Path, profile: str, start: str = "2006-01-01") -> tuple[pd.
         table = table.drop(columns=["vix_close", "vvix"])
         for column in ("vxn_close", "vxn_log_chg", "vxn_minus_vix", "vix_term_ratio", "vix9d_ratio", "vvix_log_chg"):
             groups[column] = {"group": "market", "role": "past"}
+        # Same-session variants for the lag ablation: the 16:00 ET index value is observable
+        # even though CBOE finalizes the close at 16:15. Kept in their own group so a run can
+        # include either the conservative (lagged) or the same-session versions.
+        same = asof_join(table[["date"]], vol, ["vxn_close", "vix_term_ratio"], lag_days=0, suffix="_t0")
+        table["vxn_log_chg_t0"] = np.log(same["vxn_close_t0"]).diff().to_numpy()
+        table["vix_term_ratio_t0"] = same["vix_term_ratio_t0"].to_numpy()
+        for column in ("vxn_log_chg_t0", "vix_term_ratio_t0"):
+            groups[column] = {"group": "market_t0", "role": "past"}
 
     # --- cross-asset (same-day close) ---
     if "cross" in src:
