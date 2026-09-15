@@ -1,0 +1,329 @@
+{
+  "model_id": "amazon/chronos-2",
+  "model_revision": "29ec3766d36d6f73f0696f85560a422f50e8498c",
+  "device_map": "mps",
+  "data_path": "data/processed/daily_feature_table.csv",
+  "data_sha256": "b3beb046933b15f1f75c098bfa6df30af4106395302ea4d8b68711322a262e34",
+  "groups_sha256": "85783f4158d631d06e5c3b98ed0f0ee36e3b02dc59a1c7c56faf8af7277c97b1",
+  "plan_sha256": "3fe8ff79515246197c8689d3686e073f3ffc6afdcd905268820ab4a15a41c265",
+  "sample_start": "2017-01-03",
+  "folds": {
+    "2022": [
+      "2022-01-01",
+      "2022-12-31"
+    ],
+    "2023": [
+      "2023-01-01",
+      "2023-12-31"
+    ],
+    "2024": [
+      "2024-01-01",
+      "2024-12-31"
+    ],
+    "2025": [
+      "2025-01-01",
+      "2025-12-31"
+    ],
+    "2025H2_2026H1": [
+      "2025-07-01",
+      "2026-06-30"
+    ]
+  },
+  "rungs": {
+    "r0_target": {
+      "features": [],
+      "known_covariates_names": []
+    },
+    "r1_qqq": {
+      "features": [
+        "overnight_gap",
+        "parkinson_vol_1d",
+        "parkinson_vol_22d",
+        "volume_z_20d",
+        "mom_21d",
+        "dist_200dma"
+      ],
+      "known_covariates_names": []
+    },
+    "r2_qqq_calendar": {
+      "features": [
+        "overnight_gap",
+        "parkinson_vol_1d",
+        "parkinson_vol_22d",
+        "volume_z_20d",
+        "mom_21d",
+        "dist_200dma",
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week"
+      ],
+      "known_covariates_names": [
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week"
+      ]
+    },
+    "r3_control": {
+      "features": [
+        "overnight_gap",
+        "parkinson_vol_1d",
+        "parkinson_vol_22d",
+        "volume_z_20d",
+        "mom_21d",
+        "dist_200dma",
+        "vxn_log_chg",
+        "vxn_minus_vix",
+        "vix_term_ratio",
+        "tlt_log_ret",
+        "hyg_log_ret",
+        "d_dgs2_bp",
+        "t10y2y_lag1",
+        "d_dfii10_bp",
+        "cpi_yoy",
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week"
+      ],
+      "known_covariates_names": [
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week"
+      ]
+    },
+    "r3_control_nofuture": {
+      "features": [
+        "overnight_gap",
+        "parkinson_vol_1d",
+        "parkinson_vol_22d",
+        "volume_z_20d",
+        "mom_21d",
+        "dist_200dma",
+        "vxn_log_chg",
+        "vxn_minus_vix",
+        "vix_term_ratio",
+        "tlt_log_ret",
+        "hyg_log_ret",
+        "d_dgs2_bp",
+        "t10y2y_lag1",
+        "d_dfii10_bp",
+        "cpi_yoy",
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week"
+      ],
+      "known_covariates_names": []
+    },
+    "r4_plus_uncertainty": {
+      "features": [
+        "overnight_gap",
+        "parkinson_vol_1d",
+        "parkinson_vol_22d",
+        "volume_z_20d",
+        "mom_21d",
+        "dist_200dma",
+        "vxn_log_chg",
+        "vxn_minus_vix",
+        "vix_term_ratio",
+        "tlt_log_ret",
+        "hyg_log_ret",
+        "d_dgs2_bp",
+        "t10y2y_lag1",
+        "d_dfii10_bp",
+        "cpi_yoy",
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week",
+        "epu_log",
+        "emu_log"
+      ],
+      "known_covariates_names": [
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week"
+      ]
+    },
+    "r5_plus_fed": {
+      "features": [
+        "overnight_gap",
+        "parkinson_vol_1d",
+        "parkinson_vol_22d",
+        "volume_z_20d",
+        "mom_21d",
+        "dist_200dma",
+        "vxn_log_chg",
+        "vxn_minus_vix",
+        "vix_term_ratio",
+        "tlt_log_ret",
+        "hyg_log_ret",
+        "d_dgs2_bp",
+        "t10y2y_lag1",
+        "d_dfii10_bp",
+        "cpi_yoy",
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week",
+        "fomc_net_hawkish_last",
+        "fomc_net_hawkish_ewma",
+        "fomc_tone_change_last",
+        "days_since_fomc"
+      ],
+      "known_covariates_names": [
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week"
+      ]
+    },
+    "r6_plus_gdelt_fed_recession": {
+      "features": [
+        "overnight_gap",
+        "parkinson_vol_1d",
+        "parkinson_vol_22d",
+        "volume_z_20d",
+        "mom_21d",
+        "dist_200dma",
+        "vxn_log_chg",
+        "vxn_minus_vix",
+        "vix_term_ratio",
+        "tlt_log_ret",
+        "hyg_log_ret",
+        "d_dgs2_bp",
+        "t10y2y_lag1",
+        "d_dfii10_bp",
+        "cpi_yoy",
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week",
+        "gdelt_fed_news_share",
+        "gdelt_fed_avg_tone",
+        "gdelt_recession_news_share",
+        "gdelt_recession_avg_tone"
+      ],
+      "known_covariates_names": [
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week"
+      ]
+    },
+    "r7_all_external": {
+      "features": [
+        "overnight_gap",
+        "parkinson_vol_1d",
+        "parkinson_vol_22d",
+        "volume_z_20d",
+        "mom_21d",
+        "dist_200dma",
+        "vxn_log_chg",
+        "vxn_minus_vix",
+        "vix_term_ratio",
+        "tlt_log_ret",
+        "hyg_log_ret",
+        "d_dgs2_bp",
+        "t10y2y_lag1",
+        "d_dfii10_bp",
+        "cpi_yoy",
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week",
+        "epu_log",
+        "emu_log",
+        "fomc_net_hawkish_last",
+        "fomc_net_hawkish_ewma",
+        "fomc_tone_change_last",
+        "days_since_fomc",
+        "ndx_earnings_count",
+        "sec_8k_count",
+        "sec_total_filings",
+        "gdelt_ai_news_share",
+        "gdelt_semiconductor_news_share",
+        "gdelt_fed_news_share",
+        "gdelt_inflation_news_share",
+        "gdelt_big_tech_earnings_news_share",
+        "gdelt_recession_news_share",
+        "gdelt_ai_avg_tone",
+        "gdelt_semiconductor_avg_tone",
+        "gdelt_fed_avg_tone",
+        "gdelt_inflation_avg_tone",
+        "gdelt_big_tech_earnings_avg_tone",
+        "gdelt_recession_avg_tone"
+      ],
+      "known_covariates_names": [
+        "is_fomc_day",
+        "is_cpi_day",
+        "is_nfp_day",
+        "days_to_fomc",
+        "days_to_month_end",
+        "is_opex_week"
+      ]
+    }
+  },
+  "prediction_length": 5,
+  "context_length": 512,
+  "stride": 5,
+  "max_windows": null,
+  "quantiles": [
+    0.01,
+    0.05,
+    0.1,
+    0.15,
+    0.2,
+    0.25,
+    0.3,
+    0.35,
+    0.4,
+    0.45,
+    0.5,
+    0.55,
+    0.6,
+    0.65,
+    0.7,
+    0.75,
+    0.8,
+    0.85,
+    0.9,
+    0.95,
+    0.99
+  ],
+  "package_versions": {
+    "chronos-forecasting": "2.3.2",
+    "torch": "2.11.0",
+    "transformers": "5.16.1",
+    "pandas": "3.0.5",
+    "numpy": "2.4.6"
+  }
+}
