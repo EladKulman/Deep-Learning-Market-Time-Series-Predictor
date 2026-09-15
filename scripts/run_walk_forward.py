@@ -39,6 +39,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-root", type=Path, default=Path("models/walk-forward"))
     parser.add_argument("--device-map", default="cuda")
     parser.add_argument("--prepare-only", action="store_true")
+    parser.add_argument("--train-batch-windows", type=int, help="Override the plan's windows per optimizer step (e.g. 4 for the 42-feature rung on an 11 GB GPU)")
+    parser.add_argument("--num-steps", type=int, help="Override the plan's optimizer steps (pair with --train-batch-windows to keep windows-seen constant)")
+    parser.add_argument("--output-suffix", default="", help="Appended to the cell directory name, e.g. -bw4 for a recipe variant")
     return parser.parse_args()
 
 
@@ -86,9 +89,9 @@ def comparison_command(args, plan, features, bounds, seed, output: Path) -> list
         "--context-length", str(plan["context_length"]),
         "--validation-rows", str(bounds["validation_rows"]),
         "--stride", str(plan["stride"]),
-        "--num-steps", str(plan["num_steps"]),
+        "--num-steps", str(args.num_steps if args.num_steps is not None else plan["num_steps"]),
         "--learning-rate", str(plan["learning_rate"]),
-        "--train-batch-windows", str(plan["train_batch_windows"]),
+        "--train-batch-windows", str(args.train_batch_windows if args.train_batch_windows is not None else plan["train_batch_windows"]),
         "--eval-batch-size", str(plan["eval_batch_size"]),
         "--seed", str(seed if seed is not None else plan["seeds"][0]),
         "--device-map", args.device_map,
@@ -122,7 +125,7 @@ def main() -> None:
     features = rung_features(plan, args.rung)
     bounds = fold_bounds(plan, str(args.fold), args.data)
     seed = None if args.base_only else (args.seed if args.seed is not None else plan["seeds"][0])
-    cell = f"{args.rung}-fold{args.fold}-" + ("pretrained" if args.base_only else f"seed{seed}")
+    cell = f"{args.rung}-fold{args.fold}-" + ("pretrained" if args.base_only else f"seed{seed}") + args.output_suffix
     output = args.output_root / cell
     print(json.dumps({
         "rung": args.rung, "description": plan["rungs"][args.rung]["description"],

@@ -46,4 +46,4 @@ PY
   --as-of "$AS_OF" \
   --output "$OUTPUT_ROOT/data_readiness-task${SLURM_ARRAY_TASK_ID}.json"
 "$TASK_PYTHON" -u scripts/run_walk_forward.py \
-  --task-index "$SLURM_ARRAY_TASK_ID" --output-root "$OUTPUT_ROOT" --device-map cuda
+  --task-index "$SLURM_ARRAY_TASK_ID" --output-root "$OUTPUT_ROOT" --device-map cuda ${WALK_FORWARD_EXTRA_ARGS:-}

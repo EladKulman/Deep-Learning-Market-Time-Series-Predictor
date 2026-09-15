@@ -40,10 +40,10 @@ REPEATS="${PERMUTATION_REPEATS:-3}"
 CELLS=(
   r3_qqq_calendar_market-fold2025-seed42
   r5_plus_fed-fold2025-seed42
-  r7_all_external-fold2025-seed42
+  r7_all_external-fold2025-seed42-bw4
   r3_qqq_calendar_market-fold2022-seed42
   r5_plus_fed-fold2022-seed42
-  r7_all_external-fold2022-seed42
+  r7_all_external-fold2022-seed42-bw4
 )
 CELL="${CELLS[$((SLURM_ARRAY_TASK_ID / 2))]}"
 if (( SLURM_ARRAY_TASK_ID % 2 == 0 )); then ARM=finetuned; else ARM=pretrained; fi

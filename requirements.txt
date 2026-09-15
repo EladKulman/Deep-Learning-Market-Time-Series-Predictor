@@ -16,3 +16,5 @@ transformers>=4.41,<6
 accelerate>=1.1.0,<2
 chronos-forecasting>=2.3.1
 peft>=0.18.1,<1
+tabulate>=0.9
+matplotlib>=3.8
