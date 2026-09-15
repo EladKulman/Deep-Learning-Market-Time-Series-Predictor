@@ -31,6 +31,18 @@ which narratives move the market.
 contribution as (a) a publication-aware feature table with explicit vintage limitations, (b) a covariate ablation
 ladder that ranks feature groups, and (c) event-conditioned calibration analysis.
 
+### 1.1b Thesis in one paragraph (Tom, 2026-09-15)
+The Nasdaq-100 aggregates a hundred companies, so no single headline explains a move; the
+question is which *kinds* of news carry information about the index's return distribution.
+A pretrained forecaster cannot answer it because it does not know what these inputs mean for
+daily returns (the zero-shot ladder and permutation runs show it is misled by market inputs
+and uses almost no news). Fine-tuning lets the model learn that mapping, and the ablation
+ladder plus permutation importance on the fine-tuned checkpoints reveal what it learned:
+which sources it came to rely on, in which years, and at which horizons. If the sign of the
+market-input effects flips and news sources gain importance after fine-tuning, the story is
+complete; if not, the finding is that a few thousand sessions are not enough to teach a
+foundation model what news means.
+
 ### 1.2 Departures from the proposal
 | Proposal | Final | Reason |
 |---|---|---|
@@ -319,4 +331,6 @@ per-horizon effects from the saved predictions; seeds 42 to 47 for the finalists
 - **2026-09-10** TAU Slurm array `874192` completed six single-topic GDELT fits from the pinned Chronos-2 base, each using the common 21 controls plus one topic's share and tone. All six beat the seed-42 fine-tuned control on WQL. Fed ranked first at 0.686526 (1.28% below control), narrowly ahead of recession at 0.686796; their direct paired interval crossed zero. Repeat both with seeds 43 and 44 before selecting a topic. See `docs/GDELT_TOPIC_RESULTS.md`.
 - **2026-09-15** Independent review of the first modeling round (section 13): pipeline sound; effective LoRA batch was one window (batch_size counts covariate rows); 2012-08-01 FOMC mis-dated (fixed same day); rate lags confirmed correct on re-check; VXN lag made an ablation arm (market_t0 group); screen results not yet reportable beyond "no reliable effect". Research focus restated as feature dynamics: leave-one-out, permutation importance over time, walk-forward folds.
 - **2026-09-15** Zero-shot covariate ladder (`docs/PRETRAINED_LADDER_RESULTS.md`, 9 rungs x 5 folds x 50 windows, inference only): all covariate effects within ±0.7% of the 21-feature control; 42 features significantly worse pooled (+0.0045 WQL); calendar flags as past-only beat them as known-future; Fed tone the only news input with a consistent small gain; Gaussian baseline wins the 2022 bear year; direction equals the up-day base rate everywhere. Conclusion: in-context use of covariates is weak, so any news effect must come from fine-tuning. Also found that the per-window normalization in `summarize_news_ablation.py` inflates quiet weeks; fold-level normalization used instead.
-- *(next: fix batch size and the two data issues, then rerun control and finalists with seeds 42-47; permutation importance on the all-external model; walk-forward folds)*
+- **2026-09-15** Permutation importance on the pretrained model, 42 features, Elad's window, 3 repeats (`docs/PERMUTATION_PRETRAINED_RESULTS.md`): only three features survive the paired test. Removing the lagged `vxn_log_chg` *improves* WQL by 0.014 (2% of the loss): the model misreads the one-session-lagged volatility move as contemporaneous. GDELT Fed tone is the only input whose removal hurts (+0.00175). 39 of 42 inputs are inert zero-shot. Follow-up running: same test on the 21-feature control with lagged versus same-session VXN.
+- **2026-09-15** Same-session VXN test: the pretrained model is misled by `vxn_log_chg_t0` exactly as much as by the lagged version (-0.014 both), so the lag rule is not the cause. On the 21-feature control, every fast-moving market covariate (VXN change, overnight gap, real-yield change, TLT, volume z) hurts zero-shot; only calendar structure (days_to_fomc) helps. Interpretation for the report: the pretrained model holds the wrong prior about what market covariates mean for daily returns; fine-tuning must unlearn it. Keep Elad's lagged CBOE rule as the default (conservative, no cost).
+- *(next: cluster walk-forward ladder with corrected batch (96 fits) and its pretrained arm; permutation importance on fine-tuned checkpoints; decide the VXN lag rule from the same-session test)*
