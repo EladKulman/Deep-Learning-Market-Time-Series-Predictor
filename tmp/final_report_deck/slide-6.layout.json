@@ -1,0 +1,1277 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/twozol",
+    "id": "twozol",
+    "slide": 6,
+    "layoutId": "/ppt/slideLayouts/slideLayout2.xml",
+    "layoutName": "Title and Content",
+    "masterLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "Codex Colors",
+    "colors": {
+      "accent1": "#6DCBF4",
+      "accent2": "#3D8DFF",
+      "accent3": "#47E2C2",
+      "accent4": "#85DF7B",
+      "accent5": "#F7CB59",
+      "accent6": "#F67576",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#00264F",
+      "lt2": "#D0EDFA",
+      "hlink": "#000000",
+      "folHlink": "#0097A7"
+    },
+    "fontScheme": {
+      "name": "Helvetica Neue",
+      "majorFont": {
+        "latinTypeface": "Helvetica Neue"
+      },
+      "minorFont": {
+        "latinTypeface": "Helvetica Neue"
+      }
+    },
+    "typefaces": [
+      "Helvetica Neue"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "/ppt/slideLayouts/slideLayout2.xml",
+      "name": "Title and Content",
+      "parentLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+      "elements": [
+        {
+          "order": 1,
+          "kind": "shape",
+          "scope": "layout",
+          "aid": "template/layout//ppt/slideLayouts/slideLayout2.xml/8",
+          "id": "8",
+          "name": "Text Placeholder 2",
+          "bbox": [
+            41.33,
+            213.33,
+            1197.33,
+            416
+          ],
+          "geometry": "rect",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level",
+          "textPreview": "Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level",
+          "resolvedTextStyle": {
+            "vertical": 1,
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master text styles",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master text styles"
+                }
+              ]
+            },
+            {
+              "index": 2,
+              "text": "Second level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Second level"
+                }
+              ]
+            },
+            {
+              "index": 3,
+              "text": "Third level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Third level"
+                }
+              ]
+            },
+            {
+              "index": 4,
+              "text": "Fourth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fourth level"
+                }
+              ]
+            },
+            {
+              "index": 5,
+              "text": "Fifth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fifth level"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 2,
+          "kind": "shape",
+          "scope": "layout",
+          "aid": "template/layout//ppt/slideLayouts/slideLayout2.xml/9",
+          "id": "9",
+          "name": "Footer Placeholder 4",
+          "bbox": [
+            41.33,
+            659.31,
+            374.67,
+            25.33
+          ],
+          "geometry": "rect",
+          "resolvedTextStyle": {
+            "anchor": 3,
+            "vertical": 1,
+            "verticalAlignment": "bottom",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        {
+          "order": 3,
+          "kind": "shape",
+          "scope": "layout",
+          "aid": "template/layout//ppt/slideLayouts/slideLayout2.xml/10",
+          "id": "10",
+          "name": "Slide Number Placeholder 5",
+          "bbox": [
+            1184.18,
+            659.24,
+            54.48,
+            25.33
+          ],
+          "geometry": "rect",
+          "text": "‹#›",
+          "textPreview": "‹#›",
+          "resolvedTextStyle": {
+            "anchor": 3,
+            "vertical": 1,
+            "verticalAlignment": "bottom",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "‹#›",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "‹#›"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 4,
+          "kind": "shape",
+          "scope": "layout",
+          "aid": "template/layout//ppt/slideLayouts/slideLayout2.xml/2",
+          "id": "2",
+          "name": "Title Placeholder 1",
+          "bbox": [
+            41.33,
+            36.12,
+            1197.33,
+            109.97
+          ],
+          "geometry": "rect",
+          "text": "Click to edit Master title style",
+          "textPreview": "Click to edit Master title style",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "vertical": 1,
+            "verticalAlignment": "top",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master title style",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master title style"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "scope": "master",
+      "id": "/ppt/slideMasters/slideMaster1.xml",
+      "type": "master",
+      "elements": [
+        {
+          "order": 1,
+          "kind": "shape",
+          "scope": "master",
+          "aid": "template/master//ppt/slideMasters/slideMaster1.xml/2",
+          "id": "2",
+          "name": "Title Placeholder 1",
+          "bbox": [
+            41.33,
+            36.12,
+            1197.33,
+            109.97
+          ],
+          "geometry": "rect",
+          "text": "Click to edit Master title style",
+          "textPreview": "Click to edit Master title style",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "vertical": 1,
+            "verticalAlignment": "top",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master title style",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master title style"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 2,
+          "kind": "shape",
+          "scope": "master",
+          "aid": "template/master//ppt/slideMasters/slideMaster1.xml/3",
+          "id": "3",
+          "name": "Text Placeholder 2",
+          "bbox": [
+            41.33,
+            213.33,
+            1197.33,
+            416
+          ],
+          "geometry": "rect",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level",
+          "textPreview": "Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level",
+          "resolvedTextStyle": {
+            "vertical": 1,
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master text styles",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master text styles"
+                }
+              ]
+            },
+            {
+              "index": 2,
+              "text": "Second level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Second level"
+                }
+              ]
+            },
+            {
+              "index": 3,
+              "text": "Third level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Third level"
+                }
+              ]
+            },
+            {
+              "index": 4,
+              "text": "Fourth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fourth level"
+                }
+              ]
+            },
+            {
+              "index": 5,
+              "text": "Fifth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fifth level"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 3,
+          "kind": "shape",
+          "scope": "master",
+          "aid": "template/master//ppt/slideMasters/slideMaster1.xml/5",
+          "id": "5",
+          "name": "Footer Placeholder 4",
+          "bbox": [
+            41.33,
+            659.31,
+            374.67,
+            25.33
+          ],
+          "geometry": "rect",
+          "resolvedTextStyle": {
+            "anchor": 3,
+            "vertical": 1,
+            "verticalAlignment": "bottom",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        {
+          "order": 4,
+          "kind": "shape",
+          "scope": "master",
+          "aid": "template/master//ppt/slideMasters/slideMaster1.xml/6",
+          "id": "6",
+          "name": "Slide Number Placeholder 5",
+          "bbox": [
+            1184.18,
+            659.24,
+            54.48,
+            25.33
+          ],
+          "geometry": "rect",
+          "text": "‹#›",
+          "textPreview": "‹#›",
+          "resolvedTextStyle": {
+            "anchor": 3,
+            "vertical": 1,
+            "verticalAlignment": "bottom",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "‹#›",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "‹#›"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sfix07ih",
+      "id": "6",
+      "name": "Footer Placeholder 5",
+      "bbox": [
+        41.33,
+        659.31,
+        374.67,
+        25.33
+      ],
+      "resolvedFontSize": 13.33,
+      "resolvedTextStyle": {
+        "anchor": 3,
+        "vertical": 1,
+        "fontSize": 13.33,
+        "typeface": "Helvetica Neue",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "bottom",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": ""
+          }
+        ]
+      }
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/onmx8fm1",
+      "id": "532",
+      "name": "Google Shape;532;p58",
+      "bbox": [
+        1184.18,
+        659.24,
+        54.48,
+        25.33
+      ],
+      "text": "6",
+      "textPreview": "6",
+      "resolvedFontSize": 13.33,
+      "resolvedTextStyle": {
+        "anchor": 3,
+        "vertical": 1,
+        "fontSize": 13.33,
+        "typeface": "Helvetica Neue",
+        "color": "tx1",
+        "alignment": "right",
+        "verticalAlignment": "bottom",
+        "wrap": "square",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "useParagraphSpacing": true
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "6"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "6",
+          "runs": [
+            {
+              "index": 1,
+              "text": "6"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/poveh0nm",
+      "id": "533",
+      "name": "Google Shape;533;p58",
+      "bbox": [
+        41.33,
+        36.12,
+        1197.33,
+        109.97
+      ],
+      "text": "Two completed experiment rounds",
+      "textPreview": "Two completed experiment rounds",
+      "resolvedFontSize": 38.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "vertical": 1,
+        "fontSize": 38.67,
+        "typeface": "Helvetica Neue",
+        "color": "#000000",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "useParagraphSpacing": true
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Two completed experiment rounds"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Two completed experiment rounds",
+          "resolvedTextStyle": {
+            "fontSize": 38.67,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Two completed experiment rounds",
+              "fontSize": 38.67,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "lineSpacingPercent": 90000
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "kind": "table",
+      "scope": "slide",
+      "aid": "tb/3aho7epc",
+      "id": "534",
+      "bbox": [
+        41.33,
+        195,
+        1197,
+        375
+      ],
+      "text": "Initial screen | Four-year study\nTest period | Jun 2025-Jun 2026 | 2022, 2023, 2024, 2025\nScored daily returns | 250 | 1,000\nLoRA fits | 18 | 108\nFeature design | One source added to control | Cumulative groups\nRepetitions | Selected configurations | Three seeds throughout",
+      "textPreview": "Initial screen | Four-year study | Test period | Jun 2025-Jun 2026 | 2022, 2023, 2024, 2025 | Scored daily returns | 250 | 1,000 | LoRA f...",
+      "rows": 6,
+      "cols": 3,
+      "cells": [
+        {
+          "index": 1,
+          "row": 1,
+          "column": 1,
+          "bbox": [
+            41.33,
+            195,
+            370,
+            62.5
+          ],
+          "fillColor": "#F2F3F4"
+        },
+        {
+          "index": 2,
+          "row": 1,
+          "column": 2,
+          "bbox": [
+            411.33,
+            195,
+            390,
+            62.5
+          ],
+          "text": "Initial screen",
+          "textPreview": "Initial screen",
+          "fillColor": "#F2F3F4",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Initial screen",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000",
+                "bold": true
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Initial screen",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "row": 1,
+          "column": 3,
+          "bbox": [
+            801.33,
+            195,
+            437,
+            62.5
+          ],
+          "text": "Four-year study",
+          "textPreview": "Four-year study",
+          "fillColor": "#F2F3F4",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Four-year study",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000",
+                "bold": true
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Four-year study",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "row": 2,
+          "column": 1,
+          "bbox": [
+            41.33,
+            257.5,
+            370,
+            62.5
+          ],
+          "text": "Test period",
+          "textPreview": "Test period",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Test period",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Test period",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "row": 2,
+          "column": 2,
+          "bbox": [
+            411.33,
+            257.5,
+            390,
+            62.5
+          ],
+          "text": "Jun 2025-Jun 2026",
+          "textPreview": "Jun 2025-Jun 2026",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Jun 2025-Jun 2026",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Jun 2025-Jun 2026",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "row": 2,
+          "column": 3,
+          "bbox": [
+            801.33,
+            257.5,
+            437,
+            62.5
+          ],
+          "text": "2022, 2023, 2024, 2025",
+          "textPreview": "2022, 2023, 2024, 2025",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "2022, 2023, 2024, 2025",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "2022, 2023, 2024, 2025",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "row": 3,
+          "column": 1,
+          "bbox": [
+            41.33,
+            320,
+            370,
+            62.5
+          ],
+          "text": "Scored daily returns",
+          "textPreview": "Scored daily returns",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Scored daily returns",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Scored daily returns",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "row": 3,
+          "column": 2,
+          "bbox": [
+            411.33,
+            320,
+            390,
+            62.5
+          ],
+          "text": "250",
+          "textPreview": "250",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "250",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "250",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "row": 3,
+          "column": 3,
+          "bbox": [
+            801.33,
+            320,
+            437,
+            62.5
+          ],
+          "text": "1,000",
+          "textPreview": "1,000",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "1,000",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "1,000",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "row": 4,
+          "column": 1,
+          "bbox": [
+            41.33,
+            382.5,
+            370,
+            62.5
+          ],
+          "text": "LoRA fits",
+          "textPreview": "LoRA fits",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "LoRA fits",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "LoRA fits",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "row": 4,
+          "column": 2,
+          "bbox": [
+            411.33,
+            382.5,
+            390,
+            62.5
+          ],
+          "text": "18",
+          "textPreview": "18",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "18",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "18",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 12,
+          "row": 4,
+          "column": 3,
+          "bbox": [
+            801.33,
+            382.5,
+            437,
+            62.5
+          ],
+          "text": "108",
+          "textPreview": "108",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "108",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "108",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 13,
+          "row": 5,
+          "column": 1,
+          "bbox": [
+            41.33,
+            445,
+            370,
+            62.5
+          ],
+          "text": "Feature design",
+          "textPreview": "Feature design",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Feature design",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Feature design",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 14,
+          "row": 5,
+          "column": 2,
+          "bbox": [
+            411.33,
+            445,
+            390,
+            62.5
+          ],
+          "text": "One source added to control",
+          "textPreview": "One source added to control",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "One source added to control",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "One source added to control",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 15,
+          "row": 5,
+          "column": 3,
+          "bbox": [
+            801.33,
+            445,
+            437,
+            62.5
+          ],
+          "text": "Cumulative groups",
+          "textPreview": "Cumulative groups",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Cumulative groups",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Cumulative groups",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "row": 6,
+          "column": 1,
+          "bbox": [
+            41.33,
+            507.5,
+            370,
+            62.5
+          ],
+          "text": "Repetitions",
+          "textPreview": "Repetitions",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Repetitions",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Repetitions",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 17,
+          "row": 6,
+          "column": 2,
+          "bbox": [
+            411.33,
+            507.5,
+            390,
+            62.5
+          ],
+          "text": "Selected configurations",
+          "textPreview": "Selected configurations",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Selected configurations",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Selected configurations",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "row": 6,
+          "column": 3,
+          "bbox": [
+            801.33,
+            507.5,
+            437,
+            62.5
+          ],
+          "text": "Three seeds throughout",
+          "textPreview": "Three seeds throughout",
+          "fillColor": "#FFFFFF",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Three seeds throughout",
+              "resolvedTextStyle": {
+                "fontSize": 27,
+                "typeface": "Helvetica Neue",
+                "color": "#000000"
+              },
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Three seeds throughout",
+                  "fontSize": 27,
+                  "typeface": "Helvetica Neue",
+                  "color": "#000000"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fitwbq5k",
+      "id": "535",
+      "bbox": [
+        41,
+        610,
+        1197,
+        35
+      ],
+      "geometry": "rect",
+      "text": "Same dates within each comparison. Five-day horizon throughout.",
+      "textPreview": "Same dates within each comparison. Five-day horizon throughout.",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Helvetica Neue",
+        "color": "#7B8188",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Same dates within each comparison. Five-day horizon throughout."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Same dates within each comparison. Five-day horizon throughout.",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Helvetica Neue",
+            "color": "#7B8188"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Same dates within each comparison. Five-day horizon throughout.",
+              "fontSize": 24,
+              "typeface": "Helvetica Neue",
+              "color": "#7B8188"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}
