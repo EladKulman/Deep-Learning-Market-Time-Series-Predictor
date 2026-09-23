@@ -1,0 +1,185 @@
+ppt/slides/slide1.xml
+Can news impr
+ove Nasdaq 100 forecasts?
+Deep Learning
+Group 13, Tel Aviv University
+Tom Weitman and Elad Kulman
+September 2026
+
+ppt/slides/slide2.xml
+M
+otivation
+Nasdaq-100 tracks 
+100 large non-financial companies
+including well-known companies like Apple, Microsoft, Nvidia, Amazon, and Meta
+Many factors
+ influence the index
+(Actual correlation are unknown and constantly changes )
+News
+ m
+ay contain 
+useful signals
+ about these movements
+Can a 
+deep
+-learning model
+ understand and use these relationships?
+
+ppt/slides/slide3.xml
+Existing Work
+2018–2022: 
+LSTM/GRU, CNN-LSTM
+ and 
+attention-based recurrent models
+ dominated financial forecasting.
+2021–2024: 
+Transformers
+ and 
+specialized time-series
+ architectures arrived: TFT, Informer/Autoformer, PatchTST, TimesNet, iTransformer and TimeMixer.
+2024–2026: The field moved toward 
+time-series foundation models
+ such as Chronos, TimesFM and Moirai, along with finance-specific pretraining, 
+graph neural networks
+, text/news models such as FinBERT, regime-aware models and probabilistic forecasting. 
+
+ppt/slides/slide4.xml
+T
+ime Series Models
+sequence of observations recorded over time  | Order matters 
+
+ppt/slides/slide5.xml
+A pretrained t
+ime-series foundation model
+Supports additional inputs
+Can be efficiently fine-tuned with LoRA
+Open source
+Pretrained with various data
+Ch
+ronos-2
+119.5M base parameters
+512-session context
+21 forecast quantiles
+
+ppt/slides/slide6.xml
+General Market Data
+QQQ history:
+ Returns, overnight gaps, volume, momentum, and volatility.
+Related markets: 
+Nasdaq volatility (VXN), Treasury bonds (TLT), and corporate bonds (HYG).
+Macroeconomics:
+ Interest rates, yield curves, real yields, and inflation.
+Financial 
+Events:
+ Fed meetings, inflation releases, employment reports, and options expiration.
+E
+xternal signals: 
+Economic-policy uncertainty, Fed statement tone, and SEC filing activity.
+
+ppt/slides/slide7.xml
+News Data - GDELT
+A free open platform that tracks global news and converts it into data on topics, events, and tone.
+GDELT delivers news not just as text, but as structured daily numbers that a model can use directly.
+We focus on six topics:
+AI
+Semiconductors
+Federal Reserve policy
+Inflation
+big-tech earnings
+recession
+
+ppt/slides/slide8.xml
+LoRA - Low-Rank Adaptation
+fine-tune a large pretrained model without updating all of its weights
+
+ppt/slides/slide9.xml
+
+
+ppt/slides/slide10.xml
+Train
+ing and Evaluation Process
+Two experiment rounds:
+An initial 18-run source comparison
+Followed by 108 fine-tuning runs covering four evaluation years and three random seeds.
+After training:
+We freeze the weights, forecast five separate daily returns at each origin, and advance five trading sessions.
+
+ppt/slides/slide11.xml
+How we score
+ a forecast
+The model outputs 21 quantiles for each of the next five days
+Weighted quantile loss: rewards the whole distribution, lower is better
+Coverage: the 10 to 90 percent band should contain 80 percent of outcomes
+Direction is compared with “always up”, not with 50 percent:
+in 2025, always-up scores 57 percent
+
+ppt/slides/slide12.xml
+Fine Tune Run A
+The model receives observations through the previous QQQ close and produces forcast for
+ 
+each of the next five trading-day returns. 
+After those five realized sessions, the origin advances by five sessions. Fifty non-overlapping origins therefore score 250 daily outcomes; the final two sessions of the 252-session allocation cannot form a complete block
+Fine tune with different news source sepertly and compare to control
+Check both direction and index price predictions
+
+ppt/slides/slide13.xml
+
+
+ppt/slides/slide14.xml
+How we find
+ what the model uses
+Take one input. Replace its 512 days with the same input from a different random week. Forecast again.
+Forecast got worse → the model was using it
+No change → ignored
+Forecast got better → the input was misleading it
+Fine Tune Run B
+
+ppt/slides/slide15.xml
+42 inputs - One surpris
+ing standout
+News signals
+ Mostly close to zero → little evidence of meaningful use
+VXN change
+ Large negative effect → Removing it improves the forecast
+The pretrained model doesn't strongly exploit our news signals.
+Instead, it reacts strongly to volatility.
+
+ppt/slides/slide16.xml
+
+
+ppt/slides/slide17.xml
+Does fine-tun
+ing change what the model uses?
+The model's input-usage pattern stays remarkably similar
+0.91
+ correlation
+Then underneath:
+VXN: still misleading
+News: little evidence of meaningful use
+
+ppt/slides/slide18.xml
+
+
+ppt/slides/slide19.xml
+What does fine-tun
+ing change?
+Fine-tuning helps when markets are volatile - but hurts when they're calm
+
+ppt/slides/slide20.xml
+
+
+ppt/slides/slide21.xml
+Con
+clusions
+No particular news source improved Nasdaq-100 forcasting
+Fine-tuning learns the scale of returns, not the meaning of the inputs: it widens the bands
+Fast market inputs like the VXN change hurt the pretrained model, and fine-tuning does not fix that
+
+ppt/slides/slide22.xml
+F
+uture work
+Full 
+fine-tuning with a larger budget
+Longer news history and richer text
+Improve how we represent news. 
+Compare news volume and average tone with richer features, such as unexpected changes in coverage, headline novelty, or relevance to major Nasdaq-100 companies.

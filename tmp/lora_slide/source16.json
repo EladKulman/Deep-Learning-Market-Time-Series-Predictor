@@ -1,0 +1,918 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/gny5sjyp",
+    "id": "gny5sjyp",
+    "slide": 16,
+    "layoutId": "/ppt/slideLayouts/slideLayout2.xml",
+    "layoutName": "Title and Content",
+    "masterLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "Codex Colors",
+    "colors": {
+      "accent1": "#6DCBF4",
+      "accent2": "#3D8DFF",
+      "accent3": "#47E2C2",
+      "accent4": "#85DF7B",
+      "accent5": "#F7CB59",
+      "accent6": "#F67576",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#00264F",
+      "lt2": "#D0EDFA",
+      "hlink": "#000000",
+      "folHlink": "#0097A7"
+    },
+    "fontScheme": {
+      "name": "Helvetica Neue",
+      "majorFont": {
+        "latinTypeface": "Helvetica Neue"
+      },
+      "minorFont": {
+        "latinTypeface": "Helvetica Neue"
+      }
+    },
+    "typefaces": [
+      "Helvetica Neue"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "/ppt/slideLayouts/slideLayout2.xml",
+      "name": "Title and Content",
+      "parentLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+      "elements": [
+        {
+          "order": 1,
+          "kind": "shape",
+          "scope": "layout",
+          "aid": "template/layout//ppt/slideLayouts/slideLayout2.xml/8",
+          "id": "8",
+          "name": "Text Placeholder 2",
+          "bbox": [
+            41.33,
+            213.33,
+            1197.33,
+            416
+          ],
+          "geometry": "rect",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level",
+          "textPreview": "Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level",
+          "resolvedTextStyle": {
+            "vertical": 1,
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master text styles",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master text styles"
+                }
+              ]
+            },
+            {
+              "index": 2,
+              "text": "Second level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Second level"
+                }
+              ]
+            },
+            {
+              "index": 3,
+              "text": "Third level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Third level"
+                }
+              ]
+            },
+            {
+              "index": 4,
+              "text": "Fourth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fourth level"
+                }
+              ]
+            },
+            {
+              "index": 5,
+              "text": "Fifth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fifth level"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 2,
+          "kind": "shape",
+          "scope": "layout",
+          "aid": "template/layout//ppt/slideLayouts/slideLayout2.xml/9",
+          "id": "9",
+          "name": "Footer Placeholder 4",
+          "bbox": [
+            41.33,
+            659.31,
+            374.67,
+            25.33
+          ],
+          "geometry": "rect",
+          "resolvedTextStyle": {
+            "anchor": 3,
+            "vertical": 1,
+            "verticalAlignment": "bottom",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        {
+          "order": 3,
+          "kind": "shape",
+          "scope": "layout",
+          "aid": "template/layout//ppt/slideLayouts/slideLayout2.xml/10",
+          "id": "10",
+          "name": "Slide Number Placeholder 5",
+          "bbox": [
+            1184.18,
+            659.24,
+            54.48,
+            25.33
+          ],
+          "geometry": "rect",
+          "text": "‹#›",
+          "textPreview": "‹#›",
+          "resolvedTextStyle": {
+            "anchor": 3,
+            "vertical": 1,
+            "verticalAlignment": "bottom",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "‹#›",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "‹#›"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 4,
+          "kind": "shape",
+          "scope": "layout",
+          "aid": "template/layout//ppt/slideLayouts/slideLayout2.xml/2",
+          "id": "2",
+          "name": "Title Placeholder 1",
+          "bbox": [
+            41.33,
+            36.12,
+            1197.33,
+            109.97
+          ],
+          "geometry": "rect",
+          "text": "Click to edit Master title style",
+          "textPreview": "Click to edit Master title style",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "vertical": 1,
+            "verticalAlignment": "top",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master title style",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master title style"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "scope": "master",
+      "id": "/ppt/slideMasters/slideMaster1.xml",
+      "type": "master",
+      "elements": [
+        {
+          "order": 1,
+          "kind": "shape",
+          "scope": "master",
+          "aid": "template/master//ppt/slideMasters/slideMaster1.xml/2",
+          "id": "2",
+          "name": "Title Placeholder 1",
+          "bbox": [
+            41.33,
+            36.12,
+            1197.33,
+            109.97
+          ],
+          "geometry": "rect",
+          "text": "Click to edit Master title style",
+          "textPreview": "Click to edit Master title style",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "vertical": 1,
+            "verticalAlignment": "top",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master title style",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master title style"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 2,
+          "kind": "shape",
+          "scope": "master",
+          "aid": "template/master//ppt/slideMasters/slideMaster1.xml/3",
+          "id": "3",
+          "name": "Text Placeholder 2",
+          "bbox": [
+            41.33,
+            213.33,
+            1197.33,
+            416
+          ],
+          "geometry": "rect",
+          "text": "Click to edit Master text styles\nSecond level\nThird level\nFourth level\nFifth level",
+          "textPreview": "Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level",
+          "resolvedTextStyle": {
+            "vertical": 1,
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Click to edit Master text styles",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Click to edit Master text styles"
+                }
+              ]
+            },
+            {
+              "index": 2,
+              "text": "Second level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Second level"
+                }
+              ]
+            },
+            {
+              "index": 3,
+              "text": "Third level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Third level"
+                }
+              ]
+            },
+            {
+              "index": 4,
+              "text": "Fourth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fourth level"
+                }
+              ]
+            },
+            {
+              "index": 5,
+              "text": "Fifth level",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Fifth level"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "order": 3,
+          "kind": "shape",
+          "scope": "master",
+          "aid": "template/master//ppt/slideMasters/slideMaster1.xml/5",
+          "id": "5",
+          "name": "Footer Placeholder 4",
+          "bbox": [
+            41.33,
+            659.31,
+            374.67,
+            25.33
+          ],
+          "geometry": "rect",
+          "resolvedTextStyle": {
+            "anchor": 3,
+            "vertical": 1,
+            "verticalAlignment": "bottom",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          }
+        },
+        {
+          "order": 4,
+          "kind": "shape",
+          "scope": "master",
+          "aid": "template/master//ppt/slideMasters/slideMaster1.xml/6",
+          "id": "6",
+          "name": "Slide Number Placeholder 5",
+          "bbox": [
+            1184.18,
+            659.24,
+            54.48,
+            25.33
+          ],
+          "geometry": "rect",
+          "text": "‹#›",
+          "textPreview": "‹#›",
+          "resolvedTextStyle": {
+            "anchor": 3,
+            "vertical": 1,
+            "verticalAlignment": "bottom",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "‹#›",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "‹#›"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kv2h4rqp",
+      "id": "6",
+      "name": "Footer Placeholder 5",
+      "bbox": [
+        41.33,
+        659.31,
+        374.67,
+        25.33
+      ],
+      "resolvedFontSize": 13.33,
+      "resolvedTextStyle": {
+        "anchor": 3,
+        "vertical": 1,
+        "fontSize": 13.33,
+        "typeface": "Helvetica Neue",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "bottom",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": ""
+          }
+        ]
+      }
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/svapsjax",
+      "id": "532",
+      "name": "Google Shape;532;p58",
+      "bbox": [
+        1184.18,
+        659.24,
+        54.48,
+        25.33
+      ],
+      "text": "16",
+      "textPreview": "16",
+      "resolvedFontSize": 13.33,
+      "resolvedTextStyle": {
+        "anchor": 3,
+        "vertical": 1,
+        "fontSize": 13.33,
+        "typeface": "Helvetica Neue",
+        "color": "tx1",
+        "alignment": "right",
+        "verticalAlignment": "bottom",
+        "wrap": "square",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "useParagraphSpacing": true
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "16"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "16",
+          "runs": [
+            {
+              "index": 1,
+              "text": "16"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/tgjq1obi",
+      "id": "533",
+      "name": "Google Shape;533;p58",
+      "bbox": [
+        41.33,
+        36.12,
+        1197.33,
+        109.97
+      ],
+      "text": "Backup: evidence limits and Gaussian baseline",
+      "textPreview": "Backup: evidence limits and Gaussian baseline",
+      "resolvedFontSize": 38.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "vertical": 1,
+        "fontSize": 38.67,
+        "typeface": "Helvetica Neue",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "useParagraphSpacing": true
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Backup: evidence limits and Gaussian baseline"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Backup: evidence limits and Gaussian baseline",
+          "resolvedTextStyle": {
+            "fontSize": 38.67,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Backup: evidence limits and Gaussian baseline",
+              "fontSize": 38.67,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "lineSpacingPercent": 90000
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ip87mpsv",
+      "id": "534",
+      "bbox": [
+        41,
+        213,
+        580,
+        390
+      ],
+      "geometry": "rect",
+      "text": "Control LoRA minus Gaussian\n\n-0.01088 WQL\n95% interval [-0.02269, -0.00106]\n\nPooled advantage, with a worse\n2022 point estimate",
+      "textPreview": "Control LoRA minus Gaussian |  | -0.01088 WQL | 95% interval [-0.02269, -0.00106] |  | Pooled advantage, with a worse | 2022 point estimate",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Helvetica Neue",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 7,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Control LoRA minus Gaussian"
+          },
+          {
+            "index": 2,
+            "text": ""
+          },
+          {
+            "index": 3,
+            "text": "-0.01088 WQL"
+          },
+          {
+            "index": 4,
+            "text": "95% interval [-0.02269, -0.00106]"
+          },
+          {
+            "index": 5,
+            "text": ""
+          },
+          {
+            "index": 6,
+            "text": "Pooled advantage, with a worse"
+          },
+          {
+            "index": 7,
+            "text": "2022 point estimate"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Control LoRA minus Gaussian",
+          "resolvedTextStyle": {
+            "fontSize": 30,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Control LoRA minus Gaussian",
+              "fontSize": 30,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "-0.01088 WQL",
+          "resolvedTextStyle": {
+            "fontSize": 30,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "-0.01088 WQL",
+              "fontSize": 30,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 4,
+          "text": "95% interval [-0.02269, -0.00106]",
+          "resolvedTextStyle": {
+            "fontSize": 30,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "95% interval [-0.02269, -0.00106]",
+              "fontSize": 30,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 6,
+          "text": "Pooled advantage, with a worse",
+          "resolvedTextStyle": {
+            "fontSize": 30,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Pooled advantage, with a worse",
+              "fontSize": 30,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 7,
+          "text": "2022 point estimate",
+          "resolvedTextStyle": {
+            "fontSize": 30,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "2022 point estimate",
+              "fontSize": 30,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/jqhovutg",
+      "id": "535",
+      "bbox": [
+        658,
+        213,
+        580,
+        390
+      ],
+      "geometry": "rect",
+      "text": "One ETF and four test years\n\nExploratory comparisons\n\nNo untouched prospective test\n\nPretraining overlap unresolved",
+      "textPreview": "One ETF and four test years |  | Exploratory comparisons |  | No untouched prospective test |  | Pretraining overlap unresolved",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Helvetica Neue",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "none",
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 7,
+        "lines": [
+          {
+            "index": 1,
+            "text": "One ETF and four test years"
+          },
+          {
+            "index": 2,
+            "text": ""
+          },
+          {
+            "index": 3,
+            "text": "Exploratory comparisons"
+          },
+          {
+            "index": 4,
+            "text": ""
+          },
+          {
+            "index": 5,
+            "text": "No untouched prospective test"
+          },
+          {
+            "index": 6,
+            "text": ""
+          },
+          {
+            "index": 7,
+            "text": "Pretraining overlap unresolved"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "One ETF and four test years",
+          "resolvedTextStyle": {
+            "fontSize": 30,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "One ETF and four test years",
+              "fontSize": 30,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "Exploratory comparisons",
+          "resolvedTextStyle": {
+            "fontSize": 30,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Exploratory comparisons",
+              "fontSize": 30,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 5,
+          "text": "No untouched prospective test",
+          "resolvedTextStyle": {
+            "fontSize": 30,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "No untouched prospective test",
+              "fontSize": 30,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        },
+        {
+          "index": 7,
+          "text": "Pretraining overlap unresolved",
+          "resolvedTextStyle": {
+            "fontSize": 30,
+            "typeface": "Helvetica Neue",
+            "color": "#000000"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Pretraining overlap unresolved",
+              "fontSize": 30,
+              "typeface": "Helvetica Neue",
+              "color": "#000000"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

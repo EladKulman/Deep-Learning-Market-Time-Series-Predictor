@@ -1,0 +1,225 @@
+PAGE 1
+Workshop On Deep Learning - Climate Video
+Shahar Mendel and Yarden Reich
+Contributing authors: shaharmendel@mail.tau.ac.il;
+yardenreich@mail.tau.ac.il;
+Abstract
+Climate change is an important topic that affects all of us, but many of the ways
+experts interact with the public are frequently based on raw scientific data, which
+could fail to effectively communicate to the general public the critical nature
+and importance of climate change. The objective was to train an AI system that
+would be able to produce a video post that would raise awareness about climate
+change in a more interactive and engaging way.
+1 Introduction
+Several AI systems have the capability to produce videos, a task that requires gen-
+erating multiple frames with semantic correlation. Among these models, there are
+GAN models with 2D convolution that use RNN to create the connection between the
+images [1], or more complex models that use diffusion with 3D convolution [2] or 3D
+VQ-GAN [3].
+In our project, we present a generative model designed for crafting short videos
+related to climate change, specifically focusing on forest fires. This model generates
+video clips by sequentially producing video frames using 2D VQGAN [4]. At each
+time step, the VQGAN maps a latent vector to an image. These latent vectors are
+constructed through multiple methods.
+The first method involves encoding two images into a latent space and generating
+frames for a video by interpolating between the latent representations of these images.
+The speed of the interpolation is influenced by real-world climate change data, making
+the generated content represent in a way real-world climate change data.
+The second approach entails using latent vectors from images with the desired
+attribute and images lacking this attribute. These latent vectors enable us to add the
+desired attribute to the generated image.
+1
+
+PAGE 2
+The final method involves CLIP guiding, where we optimize the latent vector of a
+given image to align with the CLIP embedding of a specified text. This process allows
+us to generate new latent vectors of our choosing.
+2 Related work
+2.1 Variational Auto-Encoder
+In this project, we used a version of a Variational Auto-Encoder [5]. The VAE is a
+generative model that effectively learns a latent representation of data, and later on
+uses this representation to generate new data samples. One version of the Variational
+Auto-Encoder is VQ-VAE [6, 7] which uses discrete vectors for the representation of
+the latent space. The encoder remains responsible for generating a representation of
+the input images within the discrete latent space and the decoder does the reverse. A
+Codebook is created to keep the discrete vectors that were learned. The encoder maps
+data to a vector in latent space and quantizes it based on the distance to prototype
+vectors in the codebook.
+2.2 Generative Adversarial Networks
+There are a lot of ML models that fall under the GAN [8–10] umbrella, but what
+they all have in common is some generative network (Generator) and some kind of
+classification network (Discriminator) that is trying to tell the difference between the
+output of the generative network and real-world data. these networks use some kind
+of version of adversarial loss[7].
+3 Methodology
+3.1 Dataset and Data Collection
+We decided to train our model on a dataset containing a mix of pictures of healthy
+forests, burning forests, and general landscapes with the intention of obtaining a latent
+space that is capable of representing both types of pictures.
+finding a good quality pre-built dataset proved to be difficult, so we created our
+own dataset by pruning existing datasets[11, 12] and scraping Google images using
+custom software we wrote
+3.2 Model
+In this project, our primary goal was to create a seamless transition between the
+images. In order to achieve this, we needed to find a way to represent these images as
+a latent vector. To accomplish this task, we chose a model with an autoencoder, more
+specifically we chose to use VQGAN.
+2
+
+PAGE 3
+VQGAN works by using the VQVAE autoencoder and training it on the VQVAE
+loss for a number of steps after the number of steps is complete the real and recon-
+structed images are also fed through a discriminator, and the GAN loss is added to
+the loss of the autoencoder, which plays the role of the generator in the GAN.
+VQ-VAE loss:
+LQV =∥ x − ˆx ∥2 + ∥ sg[E(x)] − zq ∥2
+2 + ∥ sg[zq] − E(x) ∥2
+2
+GAN hinge loss[13]:
+LGAN = E(x)∼pdata[max(0, 1 − D(x))] + E(x)∼pdata[max(0, 1 + D(G(x)))]
+LG = −E(x)∼pdata[D(G(x))]
+The reconstruction loss is computed by using a pre-trained VGG16 model. Both real
+images and the respective reconstructed images are fed through the VGG model. At
+various stages of the model’s convolution layers, their outputs are fed through a fully
+connected layer. The reconstruction loss is then calculated by summing the difference
+between the values of the real and reconstructed images.
+Fig. 1 : Reconstruction of images
+4 Video generation using interpolation
+The first method of video generation is interpolation. the video is created using two
+existing images, and images created using the convex combination of the latent vectors
+of the two original images.
+3
+
+PAGE 4
+Original
+ Reconstruction
+Fig. 2 : Images and their reconstruction
+Fig. 3 : Interpolation between the images
+Interpolations allow the user to set the final photo of the video, allowing a real-world
+comparison between two temporally differentiated pictures of the same subject (i.e.
+generating a transition between before and after pictures of a burnt forest)
+5 Attribute manipulation
+attribute manipulation of Variational Autoencoders (VAE) as described in [5], refers to
+the process of modifying specific attributes within input data. A VAE is able to learn a
+latent representation of the data through its encoder. Using this, the encoder can help
+find a latent representation of a particular attribute. This is done by computing the
+latent vectors mean of images without the attribute and subtracting it from the latent
+vectors mean of images with the attribute. By applying this attribute latent vector
+either through addition or subtraction we can control the attribute in the image. After
+modifying the latent representation, the decoder generates the modified data point.
+Using this process, we create new images for the video:
+4
+
+PAGE 5
+Fig. 4 : Changes in the image by adding the attribute latent vector
+6 Video generation using CLIP
+CLIP [14] (Contrastive Language–Image Pre-training) is a model that compares text
+to images and assigns each input pair of text and image a similarity score. CLIP is
+trained using contrastive loss, this loss is Cosine similarity between the 2 latent vectors
+corresponding to the text and image inputs.
+We used CLIP as a way to create the loss between specific prompts [15] (like
+”billowing smoke”, ”tree on fire”) and the output of the model to run gradient descent
+on the embedding of an existing photo, training the latent vector of an existing image
+to fit the prompt better.
+for example, a photo before training, and a photo after training as shown in 5.
+A video is generated using the steps between the original image and the final image,
+such that each video frame is picked using real-world data, meaning the warmer the
+climate is, the closer the frame will be to the final trained image.
+Fig. 5 : The images created using our VQGAN and CLIP
+Once the input image is passed through the encoder, the resulting image latent vec-
+tors are entered as the optimizer’s parameters. Afterward, these latent vectors are fed
+through the decoder. The loss is computed on augmented random cuts of the recon-
+structed image, with respect to the prompt. This is done to ensure the stability and
+robustness of the loss calculation.
+5
+
+PAGE 6
+Fig. 6 : Representation of how CLIP connects to the VQGAN. The gradient is calcu-
+lated between the input/output marked in blue.
+more examples:
+Fig. 7 : Different images created using our VQGAN and CLIP
+7 Limitations and Future ways to Improve
+7.1 Limitations
+One of the limitations is that our VQ-GAN doesn’t create perfect images, there are
+some artifacts that we couldn’t train out of the model. In addition, some images won’t
+reconstruct as well as we expected. This cause the clip images to not be perfect, and
+the parameters need to be adjusted to get good images.
+The other limitation is computation power, the creation of multiple images takes
+time and resources, which means the resolution of the clip cutouts number needs to
+be decreased.
+6
+
+PAGE 7
+7.2 Future ways to Improve
+Enhancing the image quality generated by VQGAN and additional fine-tuning to the
+model is a potential way to improve. Additionally, there are more sophisticated ways
+of generating a video using generative models that could be used instead of VQGAN
+and Clip.
+One alternative way of generating a video is using a diffusion model as described
+in [2]. In this method, a diffusion model is trained to generate multiple images of the
+video. These images are then inserted as the input frames for another model, allowing
+for the creation of longer videos than 16 frames. However, this method produces videos
+with lower resolutions.
+Another method entails training a 3D-VQGAN model and using a transformer to
+generate a sequence of images forming the video, as discussed in [16] and [3]. This
+approach involves substituting 3D convolution for the standard 2D convolution in
+the VQGAN and employing attention residual blocks instead of conventional residual
+blocks.
+Furthermore, there is the possibility of combining these two approaches by employ-
+ing the diffusion model to generate a sequence of images within the latent space of the
+VQGAN. Afterward, these latent space images can be decoded to produce the final
+video, as shown in the paper [17].
+References
+[1] Tulyakov, S., Liu, M.-Y., Yang, X., Kautz, J.: MoCoGAN: Decomposing Motion
+and Content for Video Generation (2017)
+[2] Ho, J., Salimans, T., Gritsenko, A., Chan, W., Norouzi, M., Fleet, D.J.: Video
+Diffusion Models (2022)
+[3] Yan, W., Zhang, Y., Abbeel, P., Srinivas, A.: VideoGPT: Video Generation using
+VQ-VAE and Transformers (2021)
+[4] Esser, P., Rombach, R., Ommer, B.: Taming transformers for high-resolution
+image synthesis. CoRR abs/2012.09841 (2020) 2012.09841
+[5] Kingma, D.P., Welling, M.: Auto-Encoding Variational Bayes (2022). https://
+https://arxiv.org/abs/1312.6114
+[6] Oord, A., Vinyals, O., Kavukcuoglu, K.: Neural discrete representation learning.
+CoRR abs/1711.00937 (2017) 1711.00937
+[7] Razavi, A., Oord, A., Vinyals, O.: Generating diverse high-fidelity images with
+VQ-VAE-2. CoRR abs/1906.00446 (2019) 1906.00446
+7
+
+PAGE 8
+[8] Goodfellow, I.J., Pouget-Abadie, J., Mirza, M., Xu, B., Warde-Farley, D., Ozair,
+S., Courville, A., Bengio, Y.: Generative Adversarial Networks (2014)
+[9] Radford, A., Metz, L., Chintala, S.: Unsupervised Representation Learning with
+Deep Convolutional Generative Adversarial Networks (2016)
+[10] Karras, T., Laine, S., Aila, T.: A Style-Based Generator Architecture for
+Generative Adversarial Networks (2019)
+[11] Rougetet, A.: Landscape pictures (2020). https://www.kaggle.com/datasets/
+arnaud58/landscape-pictures
+[12] ALIK05: Forest fire dataset (2022). https://www.kaggle.com/datasets/alik05/
+forest-fire-dataset
+[13] Lim, J.H., Ye, J.C.: Geometric GAN (2017). https://arxiv.org/abs/1705.02894v2
+[14] Radford, A., Kim, J.W., Hallacy, C., Ramesh, A., Goh, G., Agarwal, S., Sastry, G.,
+Askell, A., Mishkin, P., Clark, J., Krueger, G., Sutskever, I.: Learning Transferable
+Visual Models From Natural Language Supervision (2021). https://arxiv.org/
+abs/2103.00020
+[15] Crowson, K., Biderman, S., Kornis, D., Stander, D., Hallahan, E., Castricato,
+L., Raff, E.: VQGAN-CLIP: Open Domain Image Generation and Editing with
+Natural Language Guidance (2022). https://arxiv.org/abs/2204.08583
+[16] Ge, S., Hayes, T., Yang, H., Yin, X., Pang, G., Jacobs, D., Huang, J.-B., Parikh,
+D.: Long Video Generation with Time-Agnostic VQGAN and Time-Sensitive
+Transformer (2022)
+[17] Blattmann, A., Rombach, R., Ling, H., Dockhorn, T., Kim, S.W., Fidler, S., Kreis,
+K.: Align your Latents: High-Resolution Video Synthesis with Latent Diffusion
+Models (2023)
+[18] Ho, J., Jain, A., Abbeel, P.: Denoising Diffusion Probabilistic Models (2020)
+Appendix A Testing Other Models
+During our path to discovering VQGAN, we explored several alternative models
+capable of producing a sequence of images for video creation purposes.
+One of these models was StyleGAN [10], in which we experimented with adjusting
+the style amount to generate images. However, when we attempted this approach, the
+outcome was low-quality images that had little resemblance to the original image.
+Subsequently, we made an attempt at generating images with a diffusion model
+[18]. We used the number of steps within the UNET architecture for video generation.
+Unfortunately, the resulting video did not meet our expectations, and our training
+was restricted to low-resolution images.
+8
