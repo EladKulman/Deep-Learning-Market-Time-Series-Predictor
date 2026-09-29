@@ -1,0 +1,8 @@
+Source family,Selected representation,Role
+QQQ and related markets,"Returns, gaps, range volatility, volume, momentum, VXN, TLT, HYG",Past only
+Rates and macroeconomics,"Rate changes, curve slope, real yields, CPI growth",Past only
+Event calendar,"FOMC, CPI, payroll dates, month-end and option expiry",Known future
+EPU and EMU,Log trailing seven-day uncertainty averages,Past only
+FOMC statements,"Classifier tone, change, smoothed state, elapsed time",Past only
+SEC disclosures,Accepted filings and past earnings-event counts,Past only
+GDELT topics,Normalized news share and average tone per topic,Past only

@@ -7,3 +7,6 @@ models/
 slurm-*.out
 oath/
 @oath
+
+# Generated report compiler cache
+tmp/pdfs/editable_report/

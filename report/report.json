@@ -1,0 +1,85 @@
+{
+  "title": "Can News Improve QQQ Forecasts?",
+  "author": "Elad Kulman and Tom Weitman",
+  "output": "../output/pdf/qqq_chronos2_project_report.pdf",
+  "header_left": "News Covariates for QQQ Return Forecasting",
+  "header_right": "Workshop on Deep Learning | Group 13",
+  "sections": [
+    {
+      "file": "sections/00_title.md",
+      "page_break_before": false
+    },
+    {
+      "file": "sections/01_abstract.md",
+      "page_break_before": false
+    },
+    {
+      "file": "sections/02_introduction.md",
+      "page_break_before": false
+    },
+    {
+      "file": "sections/03_related_work.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/04_data.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/05_model_and_forecasts.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/06_experimental_design.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/07_initial_results.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/08_four_year_results.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/09_permutation_results.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/10_adaptation_results.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/11_calibration.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/12_discussion.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/13_limitations.md",
+      "page_break_before": false
+    },
+    {
+      "file": "sections/14_future_work.md",
+      "page_break_before": false
+    },
+    {
+      "file": "sections/15_conclusion.md",
+      "page_break_before": false
+    },
+    {
+      "file": "sections/16_references.md",
+      "page_break_before": true
+    },
+    {
+      "file": "sections/17_execution_record.md",
+      "page_break_before": false
+    },
+    {
+      "file": "sections/18_feature_inventory.md",
+      "page_break_before": true
+    }
+  ]
+}

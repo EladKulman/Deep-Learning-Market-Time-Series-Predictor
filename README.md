@@ -9,6 +9,18 @@ testing which source family drives the winning combined-source development resul
 The original BTC/TFT proposal is historical context; see `docs/REPORT_DECISIONS.md` for
 the current research choices and `docs/DATA_NOTES.md` for source timing and limitations.
 
+## Edit the project report
+
+Edit the dedicated Markdown files under [`report/sections/`](report/sections/), then rebuild:
+
+```bash
+./scripts/build_report.sh
+```
+
+The PDF is written to `output/pdf/qqq_chronos2_project_report.pdf`. Tables are editable CSVs in
+`report/tables/`; figure captions live beside the text. See [the report editing guide](report/README.md)
+for the section map, formatting examples, and setup on another computer.
+
 ## Current status (2026-09-10)
 
 - Repaired SEC timestamp/early-close alignment, CPI revision handling, two missing Fed

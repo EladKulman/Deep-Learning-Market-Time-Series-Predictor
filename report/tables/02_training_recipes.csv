@@ -1,0 +1,9 @@
+Property,Round A: source screen,Round B: chronological ladder
+Training starts,"January 3, 2017","January 3, 2017"
+Training ends,"June 27, 2025",Last session before each test year
+Training sessions,"2,133","1,259 to 2,012, expanding by year"
+Scored interval,"June 30, 2025-June 26, 2026","Calendar years 2022, 2023, 2024, 2025"
+Scored days,250 in 50 windows,"250 per year, 1,000 distinct days"
+Completed LoRA fits,18,108 including matched controls
+Updates and windows,"200 updates, about 1 window each","500 x 8; all-external and matched control 1,000 x 4"
+Seeds,42; 43/44 for three source setups,"42, 43, 44 for every trained setup"

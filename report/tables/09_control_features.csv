@@ -1,0 +1,5 @@
+Control family,Exact fields
+QQQ (6),"overnight_gap, parkinson_vol_1d, parkinson_vol_22d, volume_z_20d, mom_21d, dist_200dma"
+Market (5),"vxn_log_chg, vxn_minus_vix, vix_term_ratio, tlt_log_ret, hyg_log_ret"
+Rates / macro (4),"d_dgs2_bp, t10y2y_lag1, d_dfii10_bp, cpi_yoy"
+Calendar (6),"is_fomc_day, is_cpi_day, is_nfp_day, days_to_fomc, days_to_month_end, is_opex_week"

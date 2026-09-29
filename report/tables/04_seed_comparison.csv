@@ -1,0 +1,4 @@
+Source setup,Mean LoRA WQL,Seed SD,Seeds beating control
+Control,0.693582,0.001656,--
+EPU / EMU,0.693473,0.005212,1 / 3
+All external,0.689439,0.003583,2 / 3

@@ -1,0 +1,6 @@
+Round,Slurm jobs,Completed work
+Infrastructure,869927,"Five LoRA updates, 15 outcomes, adapter reload"
+A: source screen,869989; 871482; 874192,"18 fits, 200 updates per fit"
+B: ladder,896510; 896540; 896541,"84 fits, seven rungs x four years x three seeds"
+B: matched recipe,896751; 896752,"24 fits, all-external and control, 4 x 1,000"
+B: diagnostics,896501; 896762,32 pretrained cells; six paired checkpoint perturbation tests

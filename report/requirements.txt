@@ -1,0 +1,4 @@
+# Only needed for report compilation; model-training dependencies are not required.
+reportlab>=4.0,<5
+matplotlib>=3.8,<4
+markdown-it-py>=3.0,<5

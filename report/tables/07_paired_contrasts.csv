@@ -1,0 +1,4 @@
+Contrast,Mean WQL difference,Five-window-block 95% interval
+All-external LoRA minus matched control,+0.001257,"[-0.00095, +0.00369]"
+All-external LoRA minus own pretrained,-0.004766,"[-0.01013, +0.00032]"
+Control LoRA minus Gaussian,-0.010878,"[-0.02269, -0.00106]"

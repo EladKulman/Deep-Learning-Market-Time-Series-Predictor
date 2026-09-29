@@ -29,34 +29,20 @@ The main four-year confidence intervals average seeds before circular block resa
 - Wider intervals and similar importance profiles support a limited interpretation, not proof that training only learns unconditional scale.
 - All examined periods are development evidence; an untouched prospective block remains future work.
 
-## Rebuild
+## Editing and rebuilding
 
-From the repository root, with Python packages `numpy`, `pandas`, `matplotlib`, and `reportlab` available:
-
-```sh
-python scripts/analyze_presentation_report.py
-python scripts/build_presentation_report.py
-```
-
-The builder uses `scripts/presentation_report_layout.py` and bundled Liberation fonts. On this machine, ReportLab is supplied by the Codex runtime; the command used was:
+This folder preserves evidence and the original September 23 manuscript. The live editable
+source is now `report/sections/`, with CSV tables and figures under `report/`.
 
 ```sh
-env FONTCONFIG_FILE="$PWD/tmp/pdfs/final_report/fontconfig.xml" \
-  XDG_CACHE_HOME=/tmp/qqq-report-xdg-cache \
-  PYTHONPATH=/Users/eladkulman/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/site-packages \
-  MPLCONFIGDIR=/tmp/qqq-report-mpl-cache \
-  .venv/bin/python scripts/build_presentation_report.py
+./scripts/build_report.sh
 ```
 
-The existing source-screen analyzer can regenerate the optional independent audit without restoring deleted legacy outputs:
+This writes `output/pdf/qqq_chronos2_project_report.pdf`. See `report/README.md` for instructions.
+The normal build does not run the evidence analyzer, modify source files, refresh plots,
+or start training. The dated September 23 PDF remains an archived copy.
 
-```python
-import sys
-from pathlib import Path
-sys.path.insert(0, 'scripts')
-import analyze_report_results as a
-a.OUT = Path('output/pdf/qqq_report_support/source_screen_audit.json')
-a.analyze()
-```
-
-Historical hyperparameters come from saved run metadata, not the current configuration defaults. Existing deleted reports were not restored.
+To intentionally recompute the evidence aggregates (separate from editing), run
+`scripts/analyze_presentation_report.py`. This does not synchronize manually edited prose,
+tables or figures. Historical hyperparameters come from saved run metadata, not current
+configuration defaults.

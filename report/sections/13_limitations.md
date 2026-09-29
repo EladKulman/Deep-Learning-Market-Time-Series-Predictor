@@ -1,0 +1,7 @@
+## 10.2  Limits on generalization and causal interpretation
+
+The study uses one ETF, a five-day direct forecast, limited training seeds and a fixed learning rate/rank. Calendar-year folds provide distinct evaluation outcomes, but still form one market history. The first-round evaluation overlaps part of the later development history. All examined periods informed model choices, so none is an untouched final test. The October 2025 publication date of Chronos-2 follows most historical fold dates; the LoRA split does not rule out overlap with foundation-model pretraining or establish a historically deployable backtest.
+
+Point-in-time feature alignment limits look-ahead in the data pipeline but cannot recover unavailable historical vintages. The FOMC classifier is retrospective, SEC company selection reflects current leaders, and some series may contain revisions. Missing-news intervals remain masked. The second round also changes the feature snapshot and some library versions, which prevents attributing the change from the first round to the batch correction alone.
+
+Uncertainty intervals depend on normalization, pairing and resampling. We distinguish fold-normalized ladder deltas from locally normalized permutation deltas, average seed replicas before resampling, and show a longer-block sensitivity check for headline comparisons. Unadjusted exploration over many rungs, years, features and conditions can produce chance discoveries. The positive Fed-tone permutation result and single-year adaptation gains therefore require replication.

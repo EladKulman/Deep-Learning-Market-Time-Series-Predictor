@@ -1,0 +1,7 @@
+GDELT topic,Query before the English-language filter
+ai,"(""artificial intelligence"" OR ""generative AI"" OR ""machine learning"" OR OpenAI OR Nvidia)"
+semiconductor,(semiconductor OR chipmaker OR Nvidia OR AMD OR TSMC OR ASML OR Intel)
+fed,"(""Federal Reserve"" OR FOMC OR ""interest rates"" OR ""rate hike"" OR ""rate cut"")"
+inflation,"(inflation OR CPI OR ""consumer prices"" OR ""core inflation"")"
+big tech earnings,(Apple OR Microsoft OR Amazon OR Alphabet OR Meta OR Nvidia) (earnings OR revenue OR guidance)
+recession,"(recession OR ""hard landing"" OR ""economic contraction"")"

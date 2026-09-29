@@ -1,0 +1,4 @@
+Other external family,Exact fields
+EPU / EMU (2),"epu_log, emu_log"
+FOMC (4),"fomc_net_hawkish_last, fomc_net_hawkish_ewma, fomc_tone_change_last, days_since_fomc"
+SEC (3),"ndx_earnings_count, sec_8k_count, sec_total_filings"

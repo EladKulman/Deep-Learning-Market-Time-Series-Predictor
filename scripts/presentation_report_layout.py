@@ -2,8 +2,6 @@
 """Typography, charts, and layout helpers for the presentation-based report."""
 from __future__ import annotations
 
-import ast
-import json
 import os
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -12,8 +10,6 @@ os.environ.setdefault("MPLCONFIGDIR", "/tmp/qqq-report-mpl-cache")
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 from reportlab.graphics.shapes import Drawing, Line, Polygon, Rect, String
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
@@ -26,11 +22,12 @@ from reportlab.platypus import (BaseDocTemplate, Frame, Image, KeepTogether,
     PageBreak, PageTemplate, Paragraph, Spacer, Table, TableStyle)
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNS = ROOT / "models/news-ablation-869989"
 OUT = ROOT / "output/pdf/qqq_chronos2_project_report.pdf"
 TMP = ROOT / "tmp/pdfs/refined_report"
 NAVY, BLUE, TEAL, GOLD, GRAY = "#193650", "#3579AA", "#217D77", "#B9792B", "#757B82"
 PALE = "#EEF3F6"
+HEADER_LEFT = "News Covariates for QQQ Return Forecasting"
+HEADER_RIGHT = "Workshop on Deep Learning | Group 13"
 WIDTH = 166 * mm
 STORY = []
 FIGURE = TABLE = 0
@@ -38,10 +35,20 @@ FIGURE = TABLE = 0
 
 def fonts():
     bundled = Path.home() / ".cache/codex-runtimes/codex-primary-runtime/dependencies/native/libreoffice-headless/libreoffice/LibreOfficeDev.app/Contents/Resources/fonts/truetype"
-    for label, suffix in [("Regular", "Regular"), ("Bold", "Bold"), ("Italic", "Italic"), ("BoldItalic", "BoldItalic")]:
-        pdfmetrics.registerFont(TTFont("Paper" + label, str(bundled / f"LiberationSerif-{suffix}.ttf")))
-    pdfmetrics.registerFontFamily("PaperRegular", normal="PaperRegular", bold="PaperBold", italic="PaperItalic", boldItalic="PaperBoldItalic")
-    pdfmetrics.registerFont(TTFont("PaperMono", str(bundled / "LiberationMono-Regular.ttf")))
+    candidates = ([Path(os.environ['REPORT_FONT_DIR'])] if os.environ.get('REPORT_FONT_DIR') else []) + [
+        bundled, Path('/usr/share/fonts/truetype/liberation2'), Path('/usr/share/fonts/truetype/liberation')]
+    directory = next((p for p in candidates if (p/'LiberationSerif-Regular.ttf').exists()), None)
+    if directory:
+        for suffix in ['Regular', 'Bold', 'Italic', 'BoldItalic']:
+            pdfmetrics.registerFont(TTFont('Paper'+suffix, str(directory/f'LiberationSerif-{suffix}.ttf')))
+        mono = directory/'LiberationMono-Regular.ttf'
+    else:
+        directory = Path(matplotlib.get_data_path())/'fonts/ttf'
+        for label, suffix in [('Regular',''), ('Bold','-Bold'), ('Italic','-Italic'), ('BoldItalic','-BoldItalic')]:
+            pdfmetrics.registerFont(TTFont('Paper'+label, str(directory/f'DejaVuSerif{suffix}.ttf')))
+        mono = directory/'DejaVuSansMono.ttf'
+    pdfmetrics.registerFontFamily('PaperRegular', normal='PaperRegular', bold='PaperBold', italic='PaperItalic', boldItalic='PaperBoldItalic')
+    pdfmetrics.registerFont(TTFont('PaperMono', str(mono)))
 
 
 def styles():
@@ -151,8 +158,8 @@ def footer(canvas,doc):
     if doc.page > 1:
         canvas.setFont("PaperRegular",8)
         canvas.setFillColor(colors.HexColor(GRAY))
-        canvas.drawString(22*mm,281*mm,"News Covariates for QQQ Return Forecasting")
-        canvas.drawRightString(188*mm,281*mm,"Workshop on Deep Learning | Group 13")
+        canvas.drawString(22*mm,281*mm,HEADER_LEFT)
+        canvas.drawRightString(188*mm,281*mm,HEADER_RIGHT)
         canvas.setStrokeColor(colors.HexColor("#D7DEE3"));canvas.setLineWidth(.4)
         canvas.line(22*mm,278.5*mm,188*mm,278.5*mm)
     canvas.setFont("PaperRegular",9)
